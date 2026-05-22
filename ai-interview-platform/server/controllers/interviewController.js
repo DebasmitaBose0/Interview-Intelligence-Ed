@@ -253,3 +253,103 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Submit candidate verbal answer and dynamically generate AI follow-up question
+// @route   POST /api/interview/follow-up
+// @access  Private
+exports.submitAnswerAndGenerateFollowUp = async (req, res) => {
+  try {
+    const { interviewId, questionIndex, candidateAnswer } = req.body;
+
+    if (!interviewId || questionIndex === undefined || !candidateAnswer) {
+      return res.status(400).json({ success: false, message: 'Please specify interviewId, questionIndex, and candidateAnswer' });
+    }
+
+    const interview = await Interview.findById(interviewId);
+    if (!interview) {
+      return res.status(404).json({ success: false, message: 'Interview session not found' });
+    }
+
+    // Save candidate's verbal response
+    if (interview.questions[questionIndex]) {
+      interview.questions[questionIndex].candidateAnswer = candidateAnswer;
+    } else {
+      interview.questions.push({
+        questionText: 'Custom speaking block',
+        candidateAnswer,
+        category: 'technical'
+      });
+    }
+
+    const originalQuestionText = interview.questions[questionIndex] 
+      ? interview.questions[questionIndex].questionText 
+      : 'General technical capability';
+
+    // Invoke Ollama helper specifically to formulate a contextual follow-up question
+    let followUpQuestionText = '';
+    try {
+      const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
+      const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3';
+
+      const prompt = `You are an expert AI Technical Recruiter.
+A candidate for the role of ${interview.role} (${interview.experience}) just gave an answer to the following question.
+Original Question: "${originalQuestionText}"
+Candidate Answer: "${candidateAnswer}"
+
+Based on their response, write a single concise follow-up question that drills deeper into their explanation or clarifies any ambiguities. Do not say "Here is your follow-up", just output the question directly. Limit to 1 sentence.`;
+
+      console.log('[Ollama] Requesting contextual follow-up question...');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
+
+      const response = await fetch(`${OLLAMA_HOST}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: OLLAMA_MODEL, prompt, stream: false }),
+        signal: controller.signal
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const resJson = await response.json();
+        followUpQuestionText = (resJson.response || '').trim();
+      }
+    } catch (ollamaErr) {
+      console.warn('Ollama offline for follow-up, deploying deterministic prompt builder:', ollamaErr.message);
+    }
+
+    // High fidelity offline fallback for follow-up if Ollama is unreachable
+    if (!followUpQuestionText) {
+      const followUpBackups = [
+        `That is an interesting approach to managing latency. Could you explain how you would measure memory constraints under scale?`,
+        `Given your experience with this tech stack, how would you configure error boundaries to capture edge-case crashes?`,
+        `You mentioned system optimization. How does this affect caching thresholds during high concurrency cycles?`
+      ];
+      followUpQuestionText = followUpBackups[questionIndex % followUpBackups.length];
+    }
+
+    // Insert follow-up question right after the current index in chronological array
+    const followUpNode = {
+      questionText: `[Follow-Up] ${followUpQuestionText}`,
+      category: interview.questions[questionIndex] ? interview.questions[questionIndex].category : 'technical',
+      candidateAnswer: ''
+    };
+
+    // Splice follow-up question into array
+    interview.questions.splice(questionIndex + 1, 0, followUpNode);
+    await interview.save();
+
+    res.json({
+      success: true,
+      message: 'Answer saved and follow-up question generated successfully',
+      data: {
+        followUpQuestion: followUpNode.questionText,
+        questions: interview.questions
+      }
+    });
+  } catch (error) {
+    console.error('Submit Answer & Follow-up Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

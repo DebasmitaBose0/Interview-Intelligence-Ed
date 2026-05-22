@@ -17,6 +17,7 @@ const upload = multer({
 // Secure all interview routing vectors using JWT protect middleware
 router.post('/start', protect, interviewController.startInterview);
 router.post('/answer', protect, interviewController.submitAnswer);
+router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
 router.post('/coding/eval', protect, interviewController.evaluateCode);
 

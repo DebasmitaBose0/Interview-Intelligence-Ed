@@ -1,120 +1,299 @@
-import React, { useState, useEffect } from 'react';
-import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, MessageSquareCode } from 'lucide-react';
-
-const ROLE_QUESTIONS = {
-  'Frontend Engineer': [
-    "Could you explain how React's reconciliation algorithm (Fiber) differs from the old stack reconciler and how it improves layout responsiveness?",
-    "What are your core strategies for optimizing Cumulative Layout Shift (CLS) and Largest Contentful Paint (LCP) in a large-scale single-page application?",
-    "How does the CSS containment property (`contain`) impact paint reflow boundaries, and when should you utilize it in compound UI elements?"
-  ],
-  'Backend Engineer': [
-    "How would you design a distributed rate limiter for a multi-tenant API gateway, and what are the trade-offs between Redis Token Bucket and Leaky Bucket?",
-    "Can you detail your strategy for handling eventual consistency issues when migrating an monolithic DB transaction to a Saga Pattern orchestrator?",
-    "How do you profile and eliminate database lock contention in PostgreSQL under high read-write concurrency scenarios?"
-  ],
-  'Fullstack Engineer': [
-    "Describe the architectural trade-offs between implementing Server-Sent Events (SSE) versus WebSockets for a live system telemetry dashboard.",
-    "How do you design a secure token rotation policy for hybrid client applications, and how do you protect cookies against advanced CSS Injection?",
-    "Explain how you would optimize a serverless cold-start bottleneck when deploying an API gateway backend backed by a relational database."
-  ],
-  'AI / ML Engineer': [
-    "What are the main performance trade-offs between using FlashAttention-2 vs standard self-attention mechanisms during LLM inference loops?",
-    "How do you identify and mitigate semantic drift in production vector embeddings when fine-tuning a retrieval-augmented generation pipeline?",
-    "Can you explain the structural differences between LoRA and QLoRA, and how they reduce quantizing overhead during PEFT cycles?"
-  ]
-};
+import React, { useState, useEffect, useRef } from 'react';
+import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Compass, Play, AlertTriangle } from 'lucide-react';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
-  const questions = ROLE_QUESTIONS[selectedRole] || ROLE_QUESTIONS['Frontend Engineer'];
+  const interviewId = globalState.interviewId || 'demo_session_active';
+  
+  // Extract questions list from state or fallback to tracks
+  const [questions, setQuestions] = useState(
+    globalState.questions && globalState.questions.length > 0
+      ? globalState.questions
+      : [
+          { questionText: "Explain major architectural constraints of this track.", category: 'technical' },
+          { questionText: "How do you profile, identify, and eliminate performance bottlenecks?", category: 'technical' },
+          { questionText: "How do you resolve design conflicts inside highly concurrent codebases?", category: 'technical' }
+        ]
+  );
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isRecording, setIsRecording] = useState(false);
-  const [isAiSpeaking, setIsAiSpeaking] = useState(true);
+  const [isAiSpeaking, setIsAiSpeaking] = useState(false);
   const [userTranscript, setUserTranscript] = useState('');
-  const [aiCaptions, setAiCaptions] = useState('');
-  const [systemAlert, setSystemAlert] = useState('AI is asking the question...');
+  const [systemAlert, setSystemAlert] = useState('System armed. Please play the question.');
   
-  const sampleAnswers = {
-    'Frontend Engineer': [
-      "React Fiber introduces incremental rendering. It splits the reconciliation work into small chunks and spreads them over multiple frames, allowing the main thread to handle user inputs and animations in between, whereas the stack reconciler blocked it completely.",
-      "To optimize LCP, I use critical CSS inlining, priority hints for hero images, and CDN edge-routing. For CLS, I ensure explicit aspect-ratios on media, reserve layout slots for dynamic widgets, and avoid inserting dynamic content above existing layouts.",
-      "The CSS contain property isolates rendering boundaries. Specifying contain: layout paint tell the engine that child modifications won't affect external geometries, preventing complete document reflow and optimizing scroll and layout performance."
-    ],
-    'Backend Engineer': [
-      "I would use Redis with a Token Bucket algorithm implemented in Lua scripts to maintain atomicity. Token Bucket allows burstiness, while Leaky Bucket smoothens traffic. Lua scripts ensure we avoid concurrent race conditions on keys.",
-      "For a Saga Pattern, I prefer orchestrator-based sagas. To handle consistency, we write idempotent transaction handlers and compensation workflows. Outbox pattern ensures event delivery reliability between microservices.",
-      "I look for deadlocks via pg_stat_activity, tune lock_timeout parameters, establish strict order indexes for updates, break long transactions into batch operations, and use OPTIMISTIC concurrency where feasible."
-    ],
-    'Fullstack Engineer': [
-      "SSE operates over standard HTTP, making it simpler, auto-reconnecting, and firewall-friendly for unidirectional telemetry. WebSockets are full-duplex over TCP, better suited for interactive chats but requiring custom load balancing.",
-      "We use HttpOnly, Secure, and SameSite=Strict cookies to store session refresh tokens. For protection against injection, we sanitize all user input and strictly configure content security policies (CSP) blocking external stylesheet nodes.",
-      "I decrease bundle size, use provisioned concurrency for high-traffic nodes, utilize DB connection pooling like Prisma Accelerate or pgBouncer, and pre-warm execution context hooks where possible."
-    ],
-    'AI / ML Engineer': [
-      "FlashAttention-2 eliminates the quadratic latency bottleneck of traditional self-attention by avoiding redundant write/read queries to GPU high-bandwidth memory, utilizing SRAM tiling and online softmax scaling to speed up inference.",
-      "We monitor vector spaces using cosine-similarity drift thresholds against baseline datasets. Mitigations include scheduled semantic re-indexing, instruction tuning, and applying adapter weight adjustments.",
-      "LoRA injects rank-decomposition matrices into attention layers. QLoRA advances this by quantizing the base model weights to NormalFloat 4-bit (NF4) and introducing double quantization to save valuable model memory footprint."
-    ]
+  // Webcam states
+  const videoRef = useRef(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
+  // Speech Recognition ref
+  const recognitionRef = useRef(null);
+
+  // Timer parameters (60 seconds per question)
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [timerActive, setTimerActive] = useState(false);
+
+  // Countdown timer hook
+  useEffect(() => {
+    if (!timerActive || timeLeft <= 0) return;
+    const timer = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setSystemAlert('Timer expired! Saving transcript auto...');
+          handleAnswerSubmit();
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [timerActive, timeLeft]);
+
+  // Activate HTML5 camera stream
+  const startCamera = async () => {
+    setCameraError('');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        setCameraActive(true);
+      }
+    } catch (err) {
+      console.warn('Webcam permission denied or unavailable:', err);
+      setCameraError('Camera offline - stream simulation active');
+    }
   };
 
-  // Simulate AI speaking caption typing
+  // Auto start camera on load
   useEffect(() => {
-    setIsAiSpeaking(true);
-    setAiCaptions('');
-    const fullText = `[AI System]: ${questions[currentIdx]}`;
-    let charIdx = 0;
+    startCamera();
+    return () => {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const tracks = videoRef.current.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // Text-To-Speech: Read question aloud
+  const speakQuestion = () => {
+    if (!window.speechSynthesis) {
+      setSystemAlert('Speech synthesis unsupported on this browser.');
+      return;
+    }
     
+    // Cancel any ongoing speaking
+    window.speechSynthesis.cancel();
+    
+    const activeQuestionText = questions[currentIdx]?.questionText || 'Active Interview Question';
+    const utterance = new SpeechSynthesisUtterance(activeQuestionText);
+    
+    // Choose premium robot/assistant voice
+    const voices = window.speechSynthesis.getVoices();
+    const premiumVoice = voices.find(v => v.name.toLowerCase().includes('google') || v.name.toLowerCase().includes('natural')) || voices[0];
+    if (premiumVoice) utterance.voice = premiumVoice;
+    
+    utterance.rate = 1.0;
+    utterance.pitch = 0.95;
+
+    utterance.onstart = () => {
+      setIsAiSpeaking(true);
+      setSystemAlert('AI speaking. Please listen carefully...');
+    };
+
+    utterance.onend = () => {
+      setIsAiSpeaking(false);
+      setSystemAlert('AI finished speaking. Voice channels active. Speak now.');
+      // Auto start recording & timer once speaking stops
+      startVoiceRecording();
+      setTimeLeft(60);
+      setTimerActive(true);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // Play question audio automatically on index shift
+  useEffect(() => {
+    // Small delay to let speech engines load voices
+    const timer = setTimeout(() => {
+      speakQuestion();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [currentIdx]);
+
+  // Speech-To-Text Recognition configuration
+  const startVoiceRecording = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      // Simulate transcription fallback typing
+      simulateTranscriptionFallback();
+      return;
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+
+    const rec = new SpeechRecognition();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+
+    rec.onstart = () => {
+      setIsRecording(true);
+      setSystemAlert('Voice capturing engaged. Standard transcript channels logging...');
+    };
+
+    rec.onresult = (e) => {
+      let finalStr = '';
+      for (let i = e.resultIndex; i < e.results.length; ++i) {
+        if (e.results[i].isFinal) {
+          finalStr += e.results[i][0].transcript + ' ';
+        }
+      }
+      if (finalStr) {
+        setUserTranscript(prev => prev + finalStr);
+      }
+    };
+
+    rec.onerror = (e) => {
+      console.warn('Speech capture error:', e.error);
+      if (e.error === 'not-allowed') {
+        simulateTranscriptionFallback();
+      }
+    };
+
+    rec.onend = () => {
+      setIsRecording(false);
+    };
+
+    recognitionRef.current = rec;
+    rec.start();
+  };
+
+  // Transcription Sim Fallback if mic permission denied
+  const simulateTranscriptionFallback = () => {
+    setIsRecording(true);
+    setUserTranscript('');
+    setSystemAlert('Simulated text-transcription input triggered...');
+
+    const responses = [
+      "I approach core platform performance and microservice architectures by introducing strict memory caps and redis cache buffers. Splitting rendering structures over multiple frames allows the browser to keep painting threads active and optimize frame-rates.",
+      "Optimizing cumulative layout shifts depends on configuring rigid layouts. We use size specifications on dynamic widget slots, prioritize critical CSS resources, and leverage lazy loaders for deep-scroll elements.",
+      "To resolve high read-write database lock bottlenecks, I introduce row-level locking parameters, optimistic sync strategies, and transaction batch partitions to maintain optimal space-time queries."
+    ];
+
+    const targetAnswer = responses[currentIdx % responses.length];
+    const words = targetAnswer.split(' ');
+    let idx = 0;
+
     const interval = setInterval(() => {
-      if (charIdx < fullText.length) {
-        setAiCaptions(prev => prev + fullText.charAt(charIdx));
-        charIdx++;
+      if (idx < words.length) {
+        setUserTranscript(prev => prev + (prev ? ' ' : '') + words[idx]);
+        idx++;
       } else {
         clearInterval(interval);
-        setIsAiSpeaking(false);
-        setSystemAlert('AI has finished speaking. Please turn on your microphone and respond.');
+        setIsRecording(false);
+        setSystemAlert('Simulation final. Click submit response.');
       }
-    }, 15);
+    }, 280);
 
-    return () => clearInterval(interval);
-  }, [currentIdx, selectedRole]);
+    window.simInterval = interval;
+  };
+
+  const stopVoiceRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    if (window.simInterval) {
+      clearInterval(window.simInterval);
+    }
+    setIsRecording(false);
+  };
 
   const toggleRecording = () => {
-    if (!isRecording) {
-      setIsRecording(true);
-      setSystemAlert('Listening and transcribing your speech via active voice channel...');
-      setUserTranscript('');
-      
-      // Simulate speech-to-text writing standard answer
-      let index = 0;
-      const answer = sampleAnswers[selectedRole][currentIdx] || 'Standard candidate evaluation response.';
-      const words = answer.split(' ');
-      
-      const textInterval = setInterval(() => {
-        if (index < words.length) {
-          setUserTranscript(prev => prev + (prev ? ' ' : '') + words[index]);
-          index++;
-        } else {
-          clearInterval(textInterval);
-        }
-      }, 250);
-      
-      // Keep it in session variables so we can destroy if toggled off
-      window.speechSim = textInterval;
+    if (isRecording) {
+      stopVoiceRecording();
+      setSystemAlert('Recording paused.');
     } else {
-      clearInterval(window.speechSim);
-      setIsRecording(false);
-      setSystemAlert('Recording paused. Click submit to validate response.');
+      setUserTranscript('');
+      startVoiceRecording();
+    }
+  };
+
+  // Generate dynamic follow-up from Ollama backend API
+  const handleRequestFollowUp = async () => {
+    if (!userTranscript) {
+      setSystemAlert('Please record an answer transcript before requesting follow-up.');
+      return;
+    }
+
+    stopVoiceRecording();
+    setTimerActive(false);
+    setSystemAlert('Correlating response text to generate follow-up question...');
+
+    try {
+      const response = await fetch('/api/interview/follow-up', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer demo_token_active'
+        },
+        body: JSON.stringify({
+          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+          questionIndex: currentIdx,
+          candidateAnswer: userTranscript
+        })
+      });
+
+      const resJson = await response.json();
+      if (resJson.success && resJson.data) {
+        // Splice follow-up into active questions set
+        const updatedQuestions = [...questions];
+        const followUpNode = {
+          questionText: resJson.data.followUpQuestion,
+          category: questions[currentIdx].category
+        };
+        updatedQuestions.splice(currentIdx + 1, 0, followUpNode);
+        setQuestions(updatedQuestions);
+
+        // Advance to follow-up immediately
+        setUserTranscript('');
+        setCurrentIdx(prev => prev + 1);
+        setSystemAlert('AI Follow-up question loaded!');
+      } else {
+        setSystemAlert('Failed to generate follow-up. Moving forward.');
+      }
+    } catch (err) {
+      // Simulate follow-up generation offline
+      const followUpBackups = [
+        `[Follow-Up] That is an interesting approach to managing latency. Could you explain how you would measure memory constraints under scale?`,
+        `[Follow-Up] Given your experience with this tech stack, how would you configure error boundaries to capture edge-case crashes?`
+      ];
+      const backupNode = {
+        questionText: followUpBackups[currentIdx % followUpBackups.length],
+        category: questions[currentIdx].category
+      };
+      
+      const updatedQuestions = [...questions];
+      updatedQuestions.splice(currentIdx + 1, 0, backupNode);
+      setQuestions(updatedQuestions);
+      setUserTranscript('');
+      setCurrentIdx(prev => prev + 1);
+      setSystemAlert('AI Offline Follow-up question loaded!');
     }
   };
 
   const handleAnswerSubmit = () => {
-    clearInterval(window.speechSim);
-    setIsRecording(false);
+    stopVoiceRecording();
+    setTimerActive(false);
 
-    // Save answer into state
+    // Save answer to global context
     const currentAnswers = [...(globalState.userAnswers || [])];
-    currentAnswers[currentIdx] = userTranscript || "The candidate provided an overview of the requested architecture constraints.";
+    currentAnswers[currentIdx] = userTranscript || "Candidate provided technical context and architecture validation parameters.";
     
     setGlobalState(prev => ({
       ...prev,
@@ -124,24 +303,29 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     if (currentIdx < questions.length - 1) {
       setCurrentIdx(currentIdx + 1);
       setUserTranscript('');
+      setTimeLeft(60);
     } else {
-      // Finished all verbal questions, route to Coding Round!
+      // Finished all speaking categories, guide to Coding IDE
       setCurrentTab('coding');
     }
   };
 
+  // circular clock percentage math
+  const strokeDashoffset = 282.6 - (282.6 * timeLeft) / 60;
+
   return (
     <div className="max-w-6xl mx-auto py-4 space-y-6">
+      
       {/* Session Progress Header */}
       <div className="glass-panel p-4 rounded-xl flex items-center justify-between border-indigo-950/40">
         <div className="flex items-center space-x-3">
           <div className="w-2.5 h-2.5 bg-cyan-400 rounded-full animate-ping"></div>
           <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-outfit">
-            Assessment Active: <span className="text-indigo-400 font-mono">{selectedRole} Loop</span>
+            Assessment Session Active: <span className="text-indigo-400 font-mono">{selectedRole} Track</span>
           </span>
         </div>
         
-        {/* Progress Bar */}
+        {/* Progress Tracker */}
         <div className="flex items-center space-x-4">
           <span className="text-[11px] font-bold text-slate-400 font-mono">
             {currentIdx + 1} / {questions.length} Questions
@@ -155,96 +339,166 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
         </div>
       </div>
 
-      {/* Split Grid Layout */}
-      <div className="grid md:grid-cols-5 gap-6">
+      {/* Split Grid Dashboard */}
+      <div className="grid md:grid-cols-12 gap-6">
         
-        {/* Left 2 Cols: Futuristic AI Avatar Section */}
-        <div className="md:col-span-2 glass-panel p-6 rounded-2xl flex flex-col justify-between items-center relative overflow-hidden min-h-[460px] border-indigo-950/40">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl pointer-events-none"></div>
+        {/* Left Side: Avatar & Camera Telemetry Panel */}
+        <div className="md:col-span-5 space-y-6">
           
-          <div className="w-full flex justify-between items-center pb-3 border-b border-indigo-950/20">
-            <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest font-outfit">
-              Synthetic Agent
-            </span>
-            <div className="flex items-center space-x-1.5 px-2 py-0.5 bg-indigo-950/30 border border-indigo-900/30 rounded-full">
-              <span className={`w-1.5 h-1.5 rounded-full ${isAiSpeaking ? 'bg-cyan-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-              <span className="text-[9px] font-bold text-slate-400 font-fira">
-                {isAiSpeaking ? 'SPEAKING' : 'LISTENING'}
+          {/* Futuristic AI Synthetic Avatar sphere */}
+          <div className="glass-panel p-6 rounded-2xl flex flex-col items-center justify-center relative overflow-hidden min-h-[260px] border-indigo-950/40">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/5 rounded-full blur-2xl pointer-events-none"></div>
+            
+            <div className="w-full flex justify-between items-center pb-3 border-b border-indigo-950/20 absolute top-4 px-6">
+              <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-widest font-outfit">
+                Synthetic Recruiter
               </span>
-            </div>
-          </div>
-
-          {/* Synthetic Avatar Display */}
-          <div className="my-auto flex flex-col items-center space-y-6">
-            <div className="relative">
-              {/* Pulsing visual outline */}
-              <div className={`absolute -inset-4 bg-gradient-to-tr from-indigo-500/20 via-purple-500/20 to-cyan-500/20 rounded-full blur-xl transition-all duration-1000 ${isAiSpeaking ? 'scale-110 opacity-100' : 'scale-95 opacity-60'}`}></div>
-              
-              <div className={`w-36 h-36 rounded-full bg-slate-950 border-2 ${isAiSpeaking ? 'border-cyan-400 shadow-lg shadow-cyan-500/20' : 'border-indigo-900/60'} flex items-center justify-center relative z-10 transition-all duration-500 overflow-hidden`}>
-                {/* Embedded dynamic robotic brain structure representation */}
-                <div className={`w-28 h-28 rounded-full bg-slate-900/40 border border-slate-800/40 flex items-center justify-center relative ${isAiSpeaking ? 'animate-pulse' : ''}`}>
-                  <Bot className={`w-12 h-12 ${isAiSpeaking ? 'text-cyan-400 scale-105' : 'text-slate-500'} transition-all duration-300`} />
-                  
-                  {/* Orbiting lights */}
-                  <div className={`absolute border border-dashed border-indigo-500/20 w-24 h-24 rounded-full animate-[spin_10s_linear_infinite] ${isAiSpeaking ? 'opacity-100' : 'opacity-20'}`}></div>
-                  <div className={`absolute border border-dashed border-cyan-400/30 w-20 h-20 rounded-full animate-[spin_6s_linear_infinite_reverse] ${isAiSpeaking ? 'opacity-100' : 'opacity-20'}`}></div>
-                </div>
+              <div className="flex items-center space-x-1.5 px-2 py-0.5 bg-indigo-950/30 border border-indigo-900/30 rounded-full">
+                <span className={`w-1.5 h-1.5 rounded-full ${isAiSpeaking ? 'bg-cyan-500 animate-pulse' : 'bg-emerald-500'}`}></span>
+                <span className="text-[9px] font-bold text-slate-400 font-mono">
+                  {isAiSpeaking ? 'SPEAKING' : 'IDLE'}
+                </span>
               </div>
             </div>
 
-            {/* Sound Wave Animation (shown only when AI is speaking or listening) */}
-            <div className="h-10 flex items-center justify-center">
-              {isRecording ? (
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-full bg-red-950/20 border border-red-500/20 animate-pulse">
-                  <span className="w-2 h-2 rounded-full bg-red-500 animate-ping"></span>
-                  <span className="text-[10px] text-red-400 font-bold uppercase tracking-wider font-outfit">User voice live</span>
+            <div className="mt-8 flex flex-col items-center space-y-4">
+              <div className="relative">
+                <div className={`absolute -inset-4 bg-gradient-to-tr from-indigo-500/20 via-cyan-500/20 to-purple-500/20 rounded-full blur-xl transition-all duration-1000 ${isAiSpeaking ? 'scale-110 opacity-100 animate-pulse' : 'scale-95 opacity-60'}`}></div>
+                
+                <div className={`w-28 h-28 rounded-full bg-slate-950 border-2 ${isAiSpeaking ? 'border-cyan-400 shadow-lg shadow-cyan-500/20' : 'border-indigo-900/60'} flex items-center justify-center relative z-10 transition-all duration-500 overflow-hidden`}>
+                  <div className={`w-22 h-22 rounded-full bg-slate-900/40 border border-slate-800/40 flex items-center justify-center relative ${isAiSpeaking ? 'animate-pulse' : ''}`}>
+                    <Bot className={`w-10 h-10 ${isAiSpeaking ? 'text-cyan-400 scale-105' : 'text-slate-500'} transition-all duration-300`} />
+                    <div className={`absolute border border-dashed border-indigo-500/20 w-20 h-20 rounded-full animate-[spin_10s_linear_infinite] ${isAiSpeaking ? 'opacity-100' : 'opacity-25'}`}></div>
+                  </div>
                 </div>
-              ) : isAiSpeaking ? (
-                <div className="flex items-end h-8">
-                  <div className="sound-bar"></div>
-                  <div className="sound-bar"></div>
-                  <div className="sound-bar"></div>
-                  <div className="sound-bar"></div>
-                  <div className="sound-bar"></div>
-                  <div className="sound-bar"></div>
-                  <div className="sound-bar"></div>
-                </div>
-              ) : (
-                <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider font-outfit">Waiting for speech input</span>
-              )}
+              </div>
+
+              {/* Speech sound wave indicators */}
+              <div className="h-6 flex items-center justify-center">
+                {isAiSpeaking ? (
+                  <div className="flex items-end space-x-1 h-5">
+                    <span className="w-1 h-3 bg-cyan-400 rounded animate-[bounce_0.8s_infinite]"></span>
+                    <span className="w-1 h-5 bg-cyan-400 rounded animate-[bounce_0.8s_0.2s_infinite]"></span>
+                    <span className="w-1 h-2 bg-cyan-400 rounded animate-[bounce_0.8s_0.4s_infinite]"></span>
+                    <span className="w-1 h-4 bg-cyan-400 rounded animate-[bounce_0.8s_0.1s_infinite]"></span>
+                    <span className="w-1 h-1 bg-cyan-400 rounded"></span>
+                  </div>
+                ) : (
+                  <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider font-mono">Agent audio channel stable</span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Subtitles box */}
-          <div className="w-full bg-slate-950/60 border border-indigo-950/40 rounded-xl p-4 min-h-[90px]">
-            <p className="text-[11px] leading-relaxed text-slate-400 font-mono">
-              {aiCaptions || <span className="text-slate-600 italic">Initializing speech parameters...</span>}
-            </p>
+          {/* Interactive Webcam Monitor Panel */}
+          <div className="glass-panel p-6 rounded-2xl border-indigo-950/40 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-indigo-950/20">
+              <div className="flex items-center space-x-2">
+                <Video className="w-4 h-4 text-indigo-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-outfit">
+                  Webcam Monitoring Stream
+                </h3>
+              </div>
+              <span className="text-[9px] text-emerald-400 font-mono font-bold flex items-center space-x-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-1"></span>
+                LIVE
+              </span>
+            </div>
+
+            <div className="relative aspect-video rounded-xl bg-slate-950 overflow-hidden border border-indigo-950/50 flex items-center justify-center">
+              {/* Calibration tracking layout */}
+              <div className="absolute inset-0 border border-indigo-500/10 pointer-events-none z-20">
+                <div className="absolute top-2 left-2 w-3 h-3 border-t-2 border-l-2 border-indigo-500/40"></div>
+                <div className="absolute top-2 right-2 w-3 h-3 border-t-2 border-r-2 border-indigo-500/40"></div>
+                <div className="absolute bottom-2 left-2 w-3 h-3 border-b-2 border-l-2 border-indigo-500/40"></div>
+                <div className="absolute bottom-2 right-2 w-3 h-3 border-b-2 border-r-2 border-indigo-500/40"></div>
+              </div>
+
+              {cameraActive ? (
+                <video 
+                  ref={videoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted 
+                  className="w-full h-full object-cover grayscale brightness-90 contrast-110 z-10" 
+                />
+              ) : (
+                <div className="text-center p-4 space-y-3 z-10">
+                  <div className="w-10 h-10 rounded-full bg-indigo-950/40 border border-indigo-500/30 flex items-center justify-center mx-auto text-indigo-400">
+                    <Camera className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div className="space-y-0.5">
+                    <p className="text-[11px] font-bold text-slate-300 font-outfit uppercase tracking-wider">Calibration Stream Active</p>
+                    <p className="text-[9px] text-slate-500">Processing focus tracking index matrices...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between text-[9px] font-bold font-mono text-slate-500 tracking-wide">
+              <span>TELEMETRY: LOCKED</span>
+              <span className="text-indigo-400">FOCUS CALIBRATION: ACTIVE</span>
+            </div>
           </div>
+
         </div>
 
-        {/* Right 3 Cols: Active Question and Speech Capture */}
-        <div className="md:col-span-3 space-y-6">
+        {/* Right Side: Active Question, Voice Inputs & Countdown Timer */}
+        <div className="md:col-span-7 space-y-6">
           
-          {/* Question Display Card */}
-          <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-indigo-500 space-y-4">
-            <span className="px-2.5 py-0.5 bg-indigo-950/50 border border-indigo-800/40 rounded-md text-[10px] font-bold text-indigo-300 uppercase tracking-widest font-mono">
-              Interrogation Point
-            </span>
-            <h2 className="text-lg font-bold font-outfit text-white leading-relaxed">
-              {questions[currentIdx]}
-            </h2>
+          {/* Question Display Card & Timer */}
+          <div className="glass-panel p-6 rounded-2xl border-l-4 border-l-indigo-500 flex justify-between items-start space-x-6">
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <span className="px-2.5 py-0.5 bg-indigo-950/50 border border-indigo-800/40 rounded-md text-[10px] font-bold text-indigo-300 uppercase tracking-widest font-mono">
+                  {questions[currentIdx]?.category || 'Speaking'} Category
+                </span>
+                <button 
+                  onClick={speakQuestion}
+                  className="p-1 rounded bg-slate-900 border border-indigo-950 text-slate-400 hover:text-slate-200 transition-colors"
+                  title="Read question out loud"
+                >
+                  <Volume2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              <h2 className="text-base font-bold font-outfit text-white leading-relaxed">
+                {questions[currentIdx]?.questionText || 'Active speaking block'}
+              </h2>
+            </div>
+
+            {/* Circular Countdown Timer */}
+            <div className="relative shrink-0 w-16 h-16 flex items-center justify-center font-outfit">
+              <svg className="absolute w-full h-full transform -rotate-90">
+                <circle cx="32" cy="32" r="28" stroke="rgba(99, 102, 241, 0.08)" strokeWidth="4" fill="transparent" />
+                <circle 
+                  cx="32" 
+                  cy="32" 
+                  r="28" 
+                  stroke={timeLeft <= 10 ? '#ef4444' : '#6366f1'} 
+                  strokeWidth="4" 
+                  fill="transparent" 
+                  strokeDasharray="175.9"
+                  strokeDashoffset={175.9 - (175.9 * timeLeft) / 60}
+                  className="transition-all duration-1000"
+                />
+              </svg>
+              <div className="flex flex-col items-center justify-center">
+                <span className={`text-base font-black font-mono ${timeLeft <= 10 ? 'text-red-400 animate-pulse' : 'text-slate-200'}`}>{timeLeft}s</span>
+                <span className="text-[7px] text-slate-500 font-bold uppercase">Time</span>
+              </div>
+            </div>
           </div>
 
-          {/* Answer Transcribing Console */}
+          {/* Transcript Console Area */}
           <div className="glass-panel p-6 rounded-2xl space-y-4">
             <div className="flex justify-between items-center pb-2 border-b border-indigo-950/20">
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-outfit">
-                Transcript Console
+                Transcript Logging Console
               </h3>
-              {userTranscript && (
-                <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest font-fira flex items-center space-x-1 animate-pulse">
-                  <span>● Live transcribing</span>
+              {isRecording && (
+                <span className="text-[9px] text-cyan-400 font-bold uppercase tracking-widest font-mono flex items-center space-x-1 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping mr-1"></span>
+                  <span>Voice Active</span>
                 </span>
               )}
             </div>
@@ -254,17 +508,17 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
                 userTranscript
               ) : (
                 <p className="text-slate-600 italic">
-                  No speech signals detected yet. Toggle the audio microphone below and speak your response. Your spoken sentences will dynamically print here.
+                  No vocal signals detected. Activate your mic below to respond. Or let the synthesizer load simulated transcripts...
                 </p>
               )}
             </div>
 
-            {/* Status alerts */}
+            {/* Alert bar */}
             <div className="text-[10px] text-slate-500 font-medium font-mono text-center">
-              STATUS: <span className="text-indigo-400">{systemAlert}</span>
+              STATUS: <span className="text-indigo-400 uppercase">{systemAlert}</span>
             </div>
 
-            {/* Controls panel */}
+            {/* Controls */}
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
               <button
                 onClick={toggleRecording}
@@ -284,23 +538,25 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
                   </>
                 ) : (
                   <>
-                    <Mic className="w-4 h-4" />
-                    <span>Engage Voice Input</span>
+                    <Mic className="w-4 h-4 animate-pulse" />
+                    <span>Activate Voice Channel</span>
                   </>
                 )}
               </button>
 
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setUserTranscript('')}
-                  disabled={!userTranscript || isRecording}
-                  className={`p-3 rounded-xl border transition-colors ${
-                    !userTranscript || isRecording
+                  onClick={handleRequestFollowUp}
+                  disabled={!userTranscript || isAiSpeaking}
+                  className={`px-4 py-3 rounded-xl border text-xs font-bold font-outfit uppercase tracking-wider transition-all flex items-center space-x-1.5 ${
+                    !userTranscript || isAiSpeaking
                       ? 'border-indigo-950/20 text-slate-700 cursor-not-allowed'
-                      : 'border-indigo-950/60 text-slate-400 hover:text-slate-200 hover:bg-slate-900/30'
+                      : 'border-cyan-500/20 text-cyan-400 hover:bg-cyan-950/20 shadow shadow-cyan-950/20'
                   }`}
+                  title="Generate a dynamic follow-up question via local Ollama based on your transcript"
                 >
-                  <RefreshCw className="w-4 h-4" />
+                  <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
+                  <span>Request AI Follow-up</span>
                 </button>
 
                 <button
@@ -313,15 +569,18 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
                   }`}
                 >
                   <span>
-                    {currentIdx < questions.length - 1 ? 'Next Question' : 'Deploy to Code Round'}
+                    {currentIdx < questions.length - 1 ? 'Save & Proceed' : 'Go to Coding IDE'}
                   </span>
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
+
         </div>
+
       </div>
+
     </div>
   );
 }
