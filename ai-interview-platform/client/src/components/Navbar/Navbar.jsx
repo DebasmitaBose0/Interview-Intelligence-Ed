@@ -12,7 +12,7 @@ export default function Navbar() {
             System Telemetry
           </span>
         </div>
-        
+
         <div className="hidden md:flex items-center space-x-1.5 px-2.5 py-1 bg-indigo-950/40 border border-indigo-900/30 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
           <span className="text-[10px] font-medium text-slate-400">HOST: LOCALHOST:5000</span>
@@ -24,7 +24,7 @@ export default function Navbar() {
         <div className="flex items-center space-x-2 px-3 py-1 bg-gradient-to-r from-purple-950/40 to-indigo-950/40 border border-indigo-900/30 rounded-lg">
           <Sparkles className="w-3.5 h-3.5 text-purple-400" />
           <span className="text-[10px] font-bold text-indigo-200 tracking-wider font-fira">
-            MODEL: GEMINI-3.5-FLASH
+
           </span>
         </div>
 
