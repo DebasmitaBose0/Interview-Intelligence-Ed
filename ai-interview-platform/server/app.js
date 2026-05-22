@@ -3,6 +3,7 @@ const cors = require('cors');
 const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
+const resumeRoutes = require('./routes/resumeRoutes');
 
 const app = express();
 
@@ -12,6 +13,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
+app.use('/api/resume', resumeRoutes);
 
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');
