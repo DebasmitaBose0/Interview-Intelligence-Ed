@@ -50,7 +50,7 @@ const parseResumeText = (text) => {
     
     if (skill.length <= 3) {
       // Short acronyms like C, Go, Git need clear word boundaries
-      regex = new RegExp(`\\b${escaped}\\b`, 'i');
+      regex = new RegExp(`\\b${ escaped } \\b`, 'i');
     } else {
       regex = new RegExp(escaped, 'i');
     }
