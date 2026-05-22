@@ -17,11 +17,29 @@ const ReportSchema = new mongoose.Schema({
     min: 0,
     max: 100,
   },
+  communicationScore: {
+    type: Number,
+    default: 80,
+  },
+  technicalScore: {
+    type: Number,
+    default: 85,
+  },
   breakdown: {
     syntaxAccuracy: { type: Number, default: 0 },
     systemScalability: { type: Number, default: 0 },
     verbalCommunication: { type: Number, default: 0 },
     complexityOptimization: { type: Number, default: 0 },
+  },
+  strengths: [
+    { type: String }
+  ],
+  weaknesses: [
+    { type: String }
+  ],
+  feedbackReport: {
+    type: String,
+    default: '',
   },
   feedbackLogs: [
     { type: String }

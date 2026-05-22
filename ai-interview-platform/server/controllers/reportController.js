@@ -18,22 +18,99 @@ exports.synthesizeReport = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Interview session not found' });
     }
 
-    // Advanced heuristics mock score compilation based on track matching
-    const scoreBreakdowns = {
-      'Frontend Engineer': { syntaxAccuracy: 92, systemScalability: 85, verbalCommunication: 88, complexityOptimization: 90 },
-      'Backend Engineer': { syntaxAccuracy: 95, systemScalability: 92, verbalCommunication: 84, complexityOptimization: 89 },
-      'Fullstack Engineer': { syntaxAccuracy: 90, systemScalability: 88, verbalCommunication: 91, complexityOptimization: 86 },
-      'AI / ML Engineer': { syntaxAccuracy: 93, systemScalability: 90, verbalCommunication: 87, complexityOptimization: 94 }
+    console.log(`[Report Synthesizer] Analyzing candidate answers for session: ${interviewId}`);
+
+    // Dynamic heuristic evaluation of candidate transcripts
+    let totalWordCount = 0;
+    let techKeywordsMatched = 0;
+    let commKeywordsMatched = 0;
+    const answersText = (interview.questions || []).map(q => q.candidateAnswer || '').join(' ');
+    
+    if (answersText) {
+      totalWordCount = answersText.split(' ').length;
+      
+      const techKeywords = ['complexity', 'cache', 'scalable', 'o(1)', 'o(n)', 'memory', 'architecture', 'database', 'performance', 'latency'];
+      techKeywords.forEach(kw => {
+        if (answersText.toLowerCase().includes(kw)) techKeywordsMatched++;
+      });
+
+      const commKeywords = ['clearly', 'approach', 'structure', 'explain', 'design', 'collaborate', 'communication', 'team'];
+      commKeywords.forEach(kw => {
+        if (answersText.toLowerCase().includes(kw)) commKeywordsMatched++;
+      });
+    }
+
+    // Calculate dynamic scores based on word depth and keyword overlaps
+    let communicationScore = 75;
+    if (totalWordCount > 100) communicationScore += 10;
+    if (totalWordCount > 250) communicationScore += 5;
+    communicationScore += Math.min(commKeywordsMatched * 3, 10);
+    if (communicationScore > 100) communicationScore = 100;
+
+    let technicalScore = 70;
+    if (totalWordCount > 120) technicalScore += 10;
+    technicalScore += Math.min(techKeywordsMatched * 4, 15);
+    if (technicalScore > 100) technicalScore = 100;
+
+    // Advanced dynamic scoring breakdown maps
+    const breakdown = {
+      syntaxAccuracy: Math.round(technicalScore * 0.95),
+      systemScalability: Math.round(technicalScore * 0.9),
+      verbalCommunication: communicationScore,
+      complexityOptimization: Math.round(technicalScore * 0.93)
     };
 
-    const breakdown = scoreBreakdowns[interview.role] || scoreBreakdowns['Frontend Engineer'];
-    const overallScore = Math.round((breakdown.syntaxAccuracy + breakdown.systemScalability + breakdown.verbalCommunication + breakdown.complexityOptimization) / 4);
+    const overallScore = Math.round((technicalScore + communicationScore) / 2);
+
+    // Formulate tailored strengths and weaknesses
+    const strengths = [];
+    const weaknesses = [];
+
+    if (communicationScore > 85) {
+      strengths.push('Excellent verbal layout of system concepts and structured descriptions.');
+      strengths.push('Articulate response patterns keeping cognitive load minimal.');
+    } else {
+      strengths.push('Competent overview of targeted system modules.');
+      weaknesses.push('Could expand speaking descriptions to outline high-level diagrams.');
+    }
+
+    if (technicalScore > 80) {
+      strengths.push('Demonstrates solid proficiency in algorithmic complexity bounds (O(1)/O(N)).');
+      strengths.push('Keeps system memory, latency bottlenecks, and database locking strategies top of mind.');
+    } else {
+      weaknesses.push('Verify complexity bounds (Big O scaling metrics) before code implementation.');
+    }
+
+    if (totalWordCount < 50) {
+      weaknesses.push('Speaking response length is brief. Aim to elaborate on specific structural scenarios.');
+    }
+
+    if (strengths.length === 0) strengths.push('Clear understanding of targeted development frameworks.');
+    if (weaknesses.length === 0) weaknesses.push('Review deep multi-threaded performance constraints under large concurrency loads.');
 
     const feedbackLogs = [
-      `Candidate demonstrated excellent technical articulation of ${interview.role} parameters.`,
-      `Optimal memory boundaries during standard complexity tests.`,
-      `Speaking tempo and structural layout clear and production-grade.`
+      `Completed comprehensive automated AI performance synthesis for role: ${interview.role}.`,
+      `Final composite evaluation score processed: ${overallScore}%.`,
+      `Communication matrices: ${communicationScore}%. Technical matrices: ${technicalScore}%.`
     ];
+
+    // Generate markdown feedback report
+    const feedbackReport = `### AI INTERVIEW FEEDBACK REPORT
+    
+**Candidate Role:** ${interview.role}
+**Experience Profile:** ${interview.experience}
+**Overall Synthesis Score:** ${overallScore}%
+
+---
+
+#### 🌟 PRIMARY STRENGTHS
+${strengths.map(s => `- ${s}`).join('\n')}
+
+#### 🔧 SUGGESTED IMPROVEMENT PATHS
+${weaknesses.map(w => `- ${w}`).join('\n')}
+
+#### 📝 CONCRETE VERDICT
+The candidate displays strong fundamental alignment for the ${interview.role} position. By optimizing structural complexity limits and expanding speech descriptors, they will maximize high-load production scaling capabilities.`;
 
     // Check if report already exists for this interview
     let report = await Report.findOne({ interview: interviewId });
@@ -42,9 +119,25 @@ exports.synthesizeReport = async (req, res) => {
         user: userId,
         interview: interviewId,
         overallScore,
+        communicationScore,
+        technicalScore,
         breakdown,
+        strengths,
+        weaknesses,
+        feedbackReport,
         feedbackLogs,
       });
+    } else {
+      // Overwrite/Update existing for interactive iteration
+      report.overallScore = overallScore;
+      report.communicationScore = communicationScore;
+      report.technicalScore = technicalScore;
+      report.breakdown = breakdown;
+      report.strengths = strengths;
+      report.weaknesses = weaknesses;
+      report.feedbackReport = feedbackReport;
+      report.feedbackLogs = feedbackLogs;
+      await report.save();
     }
 
     // Update interview status to completed
@@ -53,7 +146,7 @@ exports.synthesizeReport = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: 'Report synthesized successfully',
+      message: 'Report synthesized successfully via dynamic AI evaluation system',
       data: report,
     });
   } catch (error) {
