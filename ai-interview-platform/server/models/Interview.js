@@ -26,6 +26,11 @@ const InterviewSchema = new mongoose.Schema({
   questions: [
     {
       questionText: { type: String, required: true },
+      category: {
+        type: String,
+        enum: ['technical', 'hr', 'coding'],
+        default: 'technical',
+      },
       candidateAnswer: { type: String, default: '' },
     }
   ],

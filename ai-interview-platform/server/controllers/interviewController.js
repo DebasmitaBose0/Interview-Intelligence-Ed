@@ -1,22 +1,56 @@
 const Interview = require('../models/Interview');
+const { generateCategorizedQuestions } = require('../services/ollamaService');
 
-// @desc    Initialize a new mock interview session document
+// @desc    Initialize a new mock interview session document with AI generated questions
 // @route   POST /api/interview/start
 // @access  Private
 exports.startInterview = async (req, res) => {
   try {
-    const { role, experience, difficulty, jobDescription } = req.body;
+    const { role, experience, difficulty, jobDescription, resumeSkills } = req.body;
     const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
 
     if (!role || !experience) {
       return res.status(400).json({ success: false, message: 'Please specify target role and experience' });
     }
 
-    // Set up standard starting questions for model validation
-    const standardQuestions = [
-      { questionText: "Explain major architectural constraints of this track." },
-      { questionText: "How do you profile, identify, and eliminate performance bottlenecks?" }
-    ];
+    // Generate dynamic AI questions using Ollama LLM service
+    console.log(`[Interview Start] Generating dynamic AI questions for role: ${role}`);
+    const aiQuestions = await generateCategorizedQuestions({
+      role,
+      experience,
+      skills: resumeSkills || [],
+      jobDescription: jobDescription || '',
+    });
+
+    // Structure categorized questions array matching database Mongoose subdocuments
+    const questionsList = [];
+
+    if (aiQuestions.technical && aiQuestions.technical.length > 0) {
+      aiQuestions.technical.forEach(q => {
+        questionsList.push({ questionText: q, category: 'technical', candidateAnswer: '' });
+      });
+    }
+
+    if (aiQuestions.hr && aiQuestions.hr.length > 0) {
+      aiQuestions.hr.forEach(q => {
+        questionsList.push({ questionText: q, category: 'hr', candidateAnswer: '' });
+      });
+    }
+
+    if (aiQuestions.coding && aiQuestions.coding.length > 0) {
+      aiQuestions.coding.forEach(q => {
+        questionsList.push({ questionText: q, category: 'coding', candidateAnswer: '' });
+      });
+    }
+
+    // High fidelity backup safety if LLM returned empty list
+    if (questionsList.length === 0) {
+      questionsList.push(
+        { questionText: 'Explain major architectural constraints of this track.', category: 'technical', candidateAnswer: '' },
+        { questionText: 'How do you handle difficult team synchronization delays?', category: 'hr', candidateAnswer: '' },
+        { questionText: 'Write a performance-critical loop resolving stack overflows.', category: 'coding', candidateAnswer: '' }
+      );
+    }
 
     const interview = await Interview.create({
       user: userId,
@@ -24,13 +58,13 @@ exports.startInterview = async (req, res) => {
       experience,
       difficulty: difficulty || 'Medium',
       jobDescription: jobDescription || '',
-      questions: standardQuestions,
+      questions: questionsList,
       status: 'speaking_active',
     });
 
     res.status(201).json({
       success: true,
-      message: 'Interview session initialized successfully',
+      message: 'Interview session initialized successfully with AI-generated questions',
       data: interview,
     });
   } catch (error) {
