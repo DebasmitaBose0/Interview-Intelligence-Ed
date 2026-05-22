@@ -68,21 +68,7 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       }
     } catch (err) {
       console.error('Registration fetch failure:', err);
-      triggerToast('Connection to server failed. Operating in sandbox mode.', 'error');
-      
-      // Dynamic offline developer fallback
-      setTimeout(() => {
-        const mockUser = {
-          _id: '664e4ea4a93a40498eb79e2a',
-          name: name,
-          email: email,
-          token: 'demo_token_active'
-        };
-        localStorage.setItem('camsense_token', 'demo_token_active');
-        setToken('demo_token_active');
-        setUser(mockUser);
-        setCurrentTab('home');
-      }, 1500);
+      triggerToast('Connection to authentication server failed. Please check backend status.', 'error');
     } finally {
       setTimeout(() => setLoading(false), 1500);
     }

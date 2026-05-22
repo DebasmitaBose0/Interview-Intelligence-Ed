@@ -51,15 +51,10 @@ export default function App() {
           }
         })
         .catch(err => {
-          console.warn('Network offline fallback, establishing local sandbox session:', err);
-          setUser({
-            _id: '664e4ea4a93a40498eb79e2a',
-            name: 'Demo Candidate',
-            email: 'candidate@camsense.ai'
-          });
-          if (currentTab === 'login' || currentTab === 'signup') {
-            setCurrentTab('home');
-          }
+          console.error('Session validation connection failure:', err);
+          localStorage.removeItem('camsense_token');
+          setToken('');
+          setCurrentTab('login');
         })
         .finally(() => {
           setCheckingAuth(false);

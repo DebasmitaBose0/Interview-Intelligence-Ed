@@ -53,7 +53,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       if (data.success) {
         triggerToast('Authentication verified! Redirecting...', 'success');
         
-        // Simulating highly styled terminal loading sequences
+        // Save session credentials
         setTimeout(() => {
           localStorage.setItem('camsense_token', data.data.token);
           setToken(data.data.token);
@@ -65,20 +65,7 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       }
     } catch (err) {
       console.error('Authentication fetch failure:', err);
-      triggerToast('Connection to server failed. Operating in sandbox mode.', 'error');
-      // Dynamic offline developer fallback
-      setTimeout(() => {
-        const mockUser = {
-          _id: '664e4ea4a93a40498eb79e2a',
-          name: 'Demo Candidate',
-          email: email,
-          token: 'demo_token_active'
-        };
-        localStorage.setItem('camsense_token', 'demo_token_active');
-        setToken('demo_token_active');
-        setUser(mockUser);
-        setCurrentTab('home');
-      }, 1500);
+      triggerToast('Connection to authentication server failed. Please check backend status.', 'error');
     } finally {
       setTimeout(() => setLoading(false), 1500);
     }
