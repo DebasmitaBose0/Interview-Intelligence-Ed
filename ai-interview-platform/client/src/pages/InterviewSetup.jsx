@@ -57,42 +57,54 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     fetchExistingResume();
   }, []);
 
-  // Recalculate match details when Job Description is changed (using debounced backend API checks)
-  useEffect(() => {
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  // Manual Trigger to analyze job description using Google Gemini API
+  const triggerJDAnalysis = async () => {
     if (!jobDescription) {
-      setMatchData(null);
+      setErrorMessage('Please paste a job description first.');
+      return;
+    }
+    if (!resumeUploaded) {
+      setErrorMessage('Please upload your resume above before running job description analysis.');
       return;
     }
 
-    const delayDebounceFn = setTimeout(async () => {
+    setIsAnalyzing(true);
+    setErrorMessage('');
+    setMatchData(null);
+
+    try {
       const token = localStorage.getItem('camsense_token');
-      if (!token) return;
-
-      try {
-        const response = await fetch('/api/resume/analyze-jd', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ jobDescription })
-        });
-        const resJson = await response.json();
-        
-        if (resJson.success && resJson.data) {
-          setMatchData(resJson.data);
-        }
-      } catch (err) {
-        console.error('JD analysis backend connection issue:', err);
-        // Soft fallback to client metrics calculation
-        if (parsedProfile && parsedProfile.skills) {
-          calculateMatchingScore(parsedProfile.skills, jobDescription);
-        }
+      if (!token) {
+        setErrorMessage('Authentication session expired. Please sign in again.');
+        setIsAnalyzing(false);
+        return;
       }
-    }, 800);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [jobDescription, parsedProfile]);
+      console.log('[JD Analysis] Dispatching target payload to backend...');
+      const response = await fetch('/api/resume/analyze-jd', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ jobDescription })
+      });
+      const resJson = await response.json();
+      
+      if (resJson.success && resJson.data) {
+        setMatchData(resJson.data);
+      } else {
+        setErrorMessage(resJson.message || 'Failed to analyze requirements.');
+      }
+    } catch (err) {
+      console.error('JD analysis API request failed:', err);
+      setErrorMessage('Failed to connect to the analysis engine. Ensure the server is online.');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   // Rotator for progress telemetry details
   useEffect(() => {
@@ -337,6 +349,32 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
               rows={6}
               className="w-full bg-[#0a0d16]/60 border border-indigo-950/60 focus:border-indigo-500/50 rounded-xl p-4 text-xs font-sans text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all resize-none"
             />
+            
+            {/* Action button to trigger Gemini skill correlation matching explicitly */}
+            <button
+              type="button"
+              onClick={triggerJDAnalysis}
+              disabled={isAnalyzing || !jobDescription}
+              className={`w-full py-3 rounded-xl font-bold font-outfit text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all duration-300 ${
+                isAnalyzing
+                  ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-900/30 cursor-not-allowed'
+                  : !jobDescription
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-900'
+                  : 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white shadow-lg shadow-indigo-600/10'
+              }`}
+            >
+              {isAnalyzing ? (
+                <>
+                  <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
+                  <span>Extracting & Matching Stacks with Gemini...</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-cyan-400" />
+                  <span>Analyze Skills Alignment</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* Calibration Options */}
