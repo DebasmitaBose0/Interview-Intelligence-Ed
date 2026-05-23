@@ -7,7 +7,7 @@ const getModel = () => {
   }
   const genAI = new GoogleGenerativeAI(apiKey);
   return genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: 'gemini-2.5-flash',
     generationConfig: { responseMimeType: 'application/json' }
   });
 };
@@ -103,7 +103,7 @@ Respond ONLY with a valid raw JSON object:
   data.matchPercentage = Math.min(Math.max(Number(data.matchPercentage) || 20, 10), 100);
 
   console.log(`[Gemini] JD match: ${data.matchPercentage}%, ${data.matchingSkills?.length} matching, ${data.missingSkills?.length} missing.`);
-  return { success: true, source: 'gemini-1.5-flash', ...data };
+  return { success: true, source: 'gemini-2.5-flash', ...data };
 };
 
 module.exports = { extractResumeData, analyzeSkillsWithGemini };
