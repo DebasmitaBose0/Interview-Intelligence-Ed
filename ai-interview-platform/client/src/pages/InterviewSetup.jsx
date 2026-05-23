@@ -1,5 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, FileText, Compass, Sparkles, Code, AlertCircle, RefreshCw, BarChart2, BookOpen, GraduationCap } from 'lucide-react';
+import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
+
+const S = {
+  card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
+  sectionTitle: { fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' },
+  btnRole: (active) => ({ padding: '16px', borderRadius: '10px', textAlign: 'left', border: `1px solid ${active ? '#fff' : '#222'}`, background: active ? '#1a1a1a' : '#0d0d0d', cursor: 'pointer', transition: 'all 0.15s', display: 'flex', flexDirection: 'column', gap: '6px' }),
+  inpTextarea: { width: '100%', background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '10px', padding: '14px', fontSize: '13px', color: '#e0e0e0', outline: 'none', resize: 'none', lineHeight: '1.6', fontFamily: 'Inter, sans-serif' },
+  inpSelect: { width: '100%', background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif' },
+  tabBtn: (active) => ({ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', borderRadius: '6px', border: `1px solid ${active ? '#333' : 'transparent'}`, background: active ? '#1a1a1a' : 'transparent', color: active ? '#fff' : '#aaa', fontSize: '12px', fontWeight: active ? '500' : '400', cursor: 'pointer', transition: 'all 0.15s' }),
+};
 
 export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [role, setRole] = useState('Frontend Engineer');
@@ -8,46 +17,37 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [resumeName, setResumeName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   const [difficulty, setDifficulty] = useState('Medium');
-  
-  // High-fidelity upload & metrics state
+
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [dragActive, setDragActive] = useState(false);
   const [loaderMessage, setLoaderMessage] = useState('Initiating cryptographic stream...');
   const [matchData, setMatchData] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
-  
-  // Parsed Resume Preview metrics
+
   const [parsedProfile, setParsedProfile] = useState(null);
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   const roles = [
-    { name: 'Frontend Engineer', icon: Code, desc: 'React, Tailwind, System Architecture, UI performance' },
-    { name: 'Backend Engineer', icon: Briefcase, desc: 'APIs, Node.js, SQL databases, System scalability' },
-    { name: 'Fullstack Engineer', icon: Compass, desc: 'Full development lifecycle, serverless, client integrations' },
-    { name: 'AI / ML Engineer', icon: Sparkles, desc: 'LLMs, Prompt Engineering, Vector dbs, neural architecture' },
+    { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
+    { name: 'Backend Engineer', icon: Briefcase, desc: 'APIs, Node.js, databases, scaling' },
+    { name: 'Fullstack Engineer', icon: Compass, desc: 'Development lifecycle, APIs, clients' },
+    { name: 'AI / ML Engineer', icon: Sparkles, desc: 'LLMs, vector databases, architectures' },
   ];
 
-  // Retrieve previously parsed resume on mount
   useEffect(() => {
     const fetchExistingResume = async () => {
       const token = localStorage.getItem('camsense_token');
       if (!token) return;
-
       try {
-        const response = await fetch('/api/resume/me', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const response = await fetch('/api/resume/me', { headers: { Authorization: `Bearer ${token}` } });
         const resJson = await response.json();
         if (resJson.success && resJson.data) {
           const profile = resJson.data;
           setResumeUploaded(true);
           setResumeName(profile.fileName || 'profile_resume.pdf');
           setParsedProfile(profile);
-          
-          // Pre-populate skills match telemetry if JD exists
           calculateMatchingScore(profile.skills, jobDescription);
         }
       } catch (err) {
@@ -57,65 +57,33 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     fetchExistingResume();
   }, []);
 
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-
-  // Manual Trigger to analyze job description using Google Gemini API
   const triggerJDAnalysis = async () => {
-    if (!jobDescription) {
-      setErrorMessage('Please paste a job description first.');
-      return;
-    }
-    if (!resumeUploaded) {
-      setErrorMessage('Please upload your resume above before running job description analysis.');
-      return;
-    }
-
+    if (!jobDescription) { setErrorMessage('Please paste a job description first.'); return; }
+    if (!resumeUploaded) { setErrorMessage('Please upload your resume above before running job description analysis.'); return; }
     setIsAnalyzing(true);
     setErrorMessage('');
     setMatchData(null);
-
     try {
       const token = localStorage.getItem('camsense_token');
-      if (!token) {
-        setErrorMessage('Authentication session expired. Please sign in again.');
-        setIsAnalyzing(false);
-        return;
-      }
-
-      console.log('[JD Analysis] Dispatching target payload to backend...');
+      if (!token) { setErrorMessage('Session expired. Sign in again.'); setIsAnalyzing(false); return; }
       const response = await fetch('/api/resume/analyze-jd', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ jobDescription })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ jobDescription }),
       });
       const resJson = await response.json();
-      
-      if (resJson.success && resJson.data) {
-        setMatchData(resJson.data);
-      } else {
-        setErrorMessage(resJson.message || 'Failed to analyze requirements.');
-      }
-    } catch (err) {
-      console.error('JD analysis API request failed:', err);
-      setErrorMessage('Failed to connect to the analysis engine. Ensure the server is online.');
+      if (resJson.success && resJson.data) { setMatchData(resJson.data); }
+      else { setErrorMessage(resJson.message || 'Failed to analyze requirements.'); }
+    } catch {
+      setErrorMessage('Failed to connect to the analysis engine.');
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  // Rotator for progress telemetry details
   useEffect(() => {
     if (!isUploading) return;
-    const messages = [
-      'Scanning document structure...',
-      'De-compressing pdf buffers...',
-      'Running regular expression parsers...',
-      'Extracting professional taxonomy...',
-      'Correlating tech stack tags...'
-    ];
+    const messages = ['Scanning document structure...', 'Extracting technical taxonomy...', 'Correlating stack tags...'];
     let i = 0;
     const interval = setInterval(() => {
       i = (i + 1) % messages.length;
@@ -125,132 +93,59 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   }, [isUploading]);
 
   const calculateMatchingScore = (skills = [], jdText = '') => {
-    if (!jdText) {
-      setMatchData(null);
-      return;
-    }
-
+    if (!jdText) { setMatchData(null); return; }
     const textLower = jdText.toLowerCase();
-    
-    // Core target overlaps
-    const matched = skills.filter(skill => textLower.includes(skill.toLowerCase()));
-    
-    // Scan JD for target required skills in database that user might be missing
-    const databaseSkills = [
-      'JavaScript', 'TypeScript', 'React', 'Angular', 'Vue', 'Node.js', 'Express',
-      'Python', 'Django', 'Flask', 'Java', 'SQL', 'PostgreSQL', 'MongoDB', 
-      'Git', 'Docker', 'AWS', 'GCP', 'Figma', 'GraphQL', 'TailwindCSS'
-    ];
-    
-    const jdSkills = databaseSkills.filter(skill => textLower.includes(skill.toLowerCase()));
-    const missing = jdSkills.filter(skill => !skills.some(s => s.toLowerCase() === skill.toLowerCase()));
-    
-    // Base score calculation
-    let matchPct = 0;
-    if (jdSkills.length > 0) {
-      matchPct = Math.round((matched.length / jdSkills.length) * 100);
-    } else {
-      matchPct = matched.length > 0 ? 80 : 40;
-    }
-    matchPct = Math.min(Math.max(matchPct, 15), 100);
-
-    let rec = '';
-    if (matchPct >= 80) {
-      rec = 'Outstanding stack match. You are an exceptional fit for the stated requirements.';
-    } else if (matchPct >= 50) {
-      rec = 'Solid overlap compatibility. Adding a few targeted skills will completely optimize match taxonomy.';
-    } else {
-      rec = 'Significant technological stack discrepancies found. Review targets and expand toolsets.';
-    }
-
-    setMatchData({
-      matchPercentage: matchPct,
-      matchingSkills: matched,
-      missingSkills: missing,
-      recommendation: rec
-    });
+    const matched = skills.filter(s => textLower.includes(s.toLowerCase()));
+    const dbSkills = ['JavaScript', 'TypeScript', 'React', 'Node.js', 'Python', 'SQL', 'PostgreSQL', 'Git', 'Docker', 'AWS'];
+    const jdSkills = dbSkills.filter(s => textLower.includes(s.toLowerCase()));
+    const missing = jdSkills.filter(s => !skills.some(u => u.toLowerCase() === s.toLowerCase()));
+    let pct = jdSkills.length > 0 ? Math.round((matched.length / jdSkills.length) * 100) : (matched.length > 0 ? 80 : 40);
+    pct = Math.min(Math.max(pct, 15), 100);
+    let rec = pct >= 80 ? 'Excellent match. Outstanding fits found.' : pct >= 50 ? 'Good overlap. Calibrating focused topics.' : 'Discrepancies identified. Review your profile.';
+    setMatchData({ matchPercentage: pct, matchingSkills: matched, missingSkills: missing, recommendation: rec });
   };
 
-  // Drag and Drop files handlers
-  const handleDrag = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      processUpload(e.dataTransfer.files[0]);
+  const processUpload = async (file) => {
+    setIsUploading(true);
+    setUploadProgress(20);
+    setErrorMessage('');
+    setMatchData(null);
+    const formData = new FormData();
+    formData.append('file', file);
+    const token = localStorage.getItem('camsense_token');
+    try {
+      const interval = setInterval(() => {
+        setUploadProgress(p => p >= 90 ? 90 : p + 15);
+      }, 250);
+      const res = await fetch('/api/resume/upload', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      clearInterval(interval);
+      setUploadProgress(100);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setTimeout(() => {
+          setResumeUploaded(true);
+          setResumeName(file.name);
+          setParsedProfile(json.data);
+          calculateMatchingScore(json.data.skills, jobDescription);
+          setIsUploading(false);
+        }, 600);
+      } else {
+        setIsUploading(false);
+        setErrorMessage(json.message || 'Error processing uploaded file');
+      }
+    } catch {
+      setIsUploading(false);
+      setErrorMessage('Network timeout. Server status is offline.');
     }
   };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
       processUpload(e.target.files[0]);
-    }
-  };
-
-  const processUpload = async (file) => {
-    setIsUploading(true);
-    setUploadProgress(15);
-    setErrorMessage('');
-    setMatchData(null);
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const token = localStorage.getItem('camsense_token');
-    
-    try {
-      // Simulate highly smooth graphical upload progression
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 85) {
-            clearInterval(progressInterval);
-            return 85;
-          }
-          return prev + 12;
-        });
-      }, 300);
-
-      const response = await fetch('/api/resume/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
-      });
-
-      clearInterval(progressInterval);
-      setUploadProgress(100);
-
-      const resJson = await response.json();
-
-      if (resJson.success && resJson.data) {
-        setTimeout(() => {
-          const profile = resJson.data;
-          setResumeUploaded(true);
-          setResumeName(file.name);
-          setParsedProfile(profile);
-          
-          calculateMatchingScore(profile.skills, jobDescription);
-          setIsUploading(false);
-        }, 800);
-      } else {
-        setIsUploading(false);
-        setErrorMessage(resJson.message || 'Error processing uploaded file');
-      }
-    } catch (error) {
-      console.error('Upload parser error:', error);
-      setIsUploading(false);
-      setErrorMessage('Network timeout. Ensure backend port 5000 is active.');
     }
   };
 
@@ -261,464 +156,229 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       experience,
       resumeUploaded,
       resumeName,
-      jobDescription: jobDescription || 'Standard modern fullstack developer profile',
+      jobDescription: jobDescription || 'Standard Developer profile',
       difficulty,
-      matchPercentage: matchData ? matchData.matchPercentage : 0
+      matchPercentage: matchData ? matchData.matchPercentage : 0,
     }));
     setCurrentTab('session');
   };
 
-  const getGlowColor = (pct) => {
-    if (pct >= 80) return 'text-emerald-400 border-emerald-500/30 bg-emerald-950/20';
-    if (pct >= 50) return 'text-cyan-400 border-cyan-500/30 bg-cyan-950/20';
-    return 'text-amber-400 border-amber-500/30 bg-amber-950/20';
-  };
-
   return (
-    <div className="max-w-6xl mx-auto py-6 space-y-10">
+    <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
       
-      {/* Header Banner */}
-      <div className="space-y-2 relative">
-        <div className="absolute top-0 right-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
-        <h1 className="text-3xl font-extrabold font-outfit text-white tracking-tight flex items-center space-x-2">
-          <span>Configure Your Evaluation Environment</span>
-        </h1>
-        <p className="text-sm text-slate-400 max-w-2xl">
-          Upload your PDF or DOCX Resume. Our AI extractor parses your tech stack, education, and career experience dynamically to calibrate target interview rounds.
+      {/* Page Title */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Configure assessment</h1>
+        <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.6' }}>
+          Upload your credentials or resume profile. Camsense extracts your technical capabilities and structures the dynamic assessment questions.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-12 gap-8">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         
-        {/* Left Hand: Configuration Parameters */}
-        <div className="md:col-span-6 space-y-6">
+        {/* Left Side options */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Target Role selection */}
-          <div className="glass-panel p-6 rounded-2xl space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-indigo-400 font-outfit flex items-center space-x-2">
-              <Compass className="w-4 h-4 text-indigo-400" />
-              <span>1. Target Role Category</span>
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {roles.map((item) => {
-                const Icon = item.icon;
-                const isSelected = role === item.name;
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => setRole(item.name)}
-                    className={`p-4 rounded-xl text-left border transition-all duration-300 relative overflow-hidden group ${
-                      isSelected
-                        ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-950/50'
-                        : 'bg-slate-900/40 border-indigo-950/40 hover:border-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3 mb-2">
-                      <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-400 group-hover:text-slate-300'} transition-colors`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <h3 className="text-[13px] font-bold text-slate-200 tracking-wide font-outfit">
-                        {item.name}
-                      </h3>
+          <div style={S.card}>
+            <div style={S.sectionTitle}>
+              <Compass size={14} /> 1. Select Track Role
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {roles.map(r => (
+                <button key={r.name} onClick={() => setRole(r.name)} style={S.btnRole(role === r.name)}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ color: role === r.name ? '#fff' : '#aaa' }}>
+                      <r.icon size={15} />
                     </div>
-                    <p className="text-[11px] text-slate-400 leading-normal font-sans">
-                      {item.desc}
-                    </p>
-                    {isSelected && (
-                      <div className="absolute right-2 top-2 w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></div>
-                    )}
-                  </button>
-                );
-              })}
+                    <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{r.name}</span>
+                  </div>
+                  <span style={{ fontSize: '11px', color: '#aaa', lineHeight: '1.4' }}>{r.desc}</span>
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Job description section */}
-          <div className="glass-panel p-6 rounded-2xl space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-indigo-400 font-outfit flex items-center space-x-2">
-                <Briefcase className="w-4 h-4 text-indigo-400" />
-                <span>2. Target Requirements Description</span>
-              </h2>
-              <span className="text-[10px] text-indigo-400 font-bold uppercase bg-indigo-950/50 px-2 py-0.5 rounded-md border border-indigo-900/30">Skill Matcher Active</span>
+          <div style={S.card}>
+            <div style={S.sectionTitle}>
+              <Briefcase size={14} /> 2. Job Description Requirements
             </div>
             <textarea
               value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-              placeholder="Paste targeted job description posting parameters here to calculate technical skills matches and adjust evaluation focus..."
-              rows={6}
-              className="w-full bg-[#0a0d16]/60 border border-indigo-950/60 focus:border-indigo-500/50 rounded-xl p-4 text-xs font-sans text-slate-300 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all resize-none"
+              onChange={e => setJobDescription(e.target.value)}
+              placeholder="Paste the target JD parameters to calculate skills matches and customize the AI feedback loops..."
+              rows={5}
+              style={S.inpTextarea}
             />
-            
-            {/* Action button to trigger Gemini skill correlation matching explicitly */}
             <button
-              type="button"
               onClick={triggerJDAnalysis}
               disabled={isAnalyzing || !jobDescription}
-              className={`w-full py-3 rounded-xl font-bold font-outfit text-xs uppercase tracking-wider flex items-center justify-center space-x-2 transition-all duration-300 ${
-                isAnalyzing
-                  ? 'bg-indigo-950/60 text-indigo-400 border border-indigo-900/30 cursor-not-allowed'
-                  : !jobDescription
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-900'
-                  : 'bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white shadow-lg shadow-indigo-600/10'
-              }`}
+              style={{
+                width: '100%', padding: '10px', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', cursor: isAnalyzing || !jobDescription ? 'not-allowed' : 'pointer',
+                background: isAnalyzing || !jobDescription ? '#1a1a1a' : '#fff',
+                color: isAnalyzing || !jobDescription ? '#555' : '#000',
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              }}
             >
-              {isAnalyzing ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-                  <span>Extracting & Matching Stacks with Gemini...</span>
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4 text-cyan-400" />
-                  <span>Analyze Skills Alignment</span>
-                </>
-              )}
+              {isAnalyzing ? 'Extracting Stack alignment…' : 'Analyze requirement overlap'}
             </button>
           </div>
 
-          {/* Calibration Options */}
-          <div className="glass-panel p-6 rounded-2xl space-y-5">
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-indigo-400 font-outfit block">
-                3. Difficulty Calibrator
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {['Easy', 'Medium', 'Hard'].map((diff) => (
-                  <button
-                    key={diff}
-                    onClick={() => setDifficulty(diff)}
-                    className={`py-2 text-[11px] font-bold font-outfit rounded-lg border transition-all ${
-                      difficulty === diff
-                        ? 'bg-indigo-950/60 border-indigo-500 text-white shadow shadow-indigo-950'
-                        : 'bg-slate-900/30 border-slate-900/60 text-slate-500 hover:text-slate-400'
-                    }`}
-                  >
-                    {diff}
-                  </button>
-                ))}
+          {/* Calibrator settings */}
+          <div style={S.card}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Difficulty</label>
+                <div style={{ display: 'flex', background: '#0d0d0d', border: '1px solid #222', borderRadius: '6px', padding: '2px' }}>
+                  {['Easy', 'Medium', 'Hard'].map(d => (
+                    <button key={d} onClick={() => setDifficulty(d)} style={{ flex: 1, padding: '6px', fontSize: '11px', border: 'none', borderRadius: '4px', cursor: 'pointer', background: difficulty === d ? '#1e1e1e' : 'transparent', color: difficulty === d ? '#fff' : '#aaa', transition: 'all 0.15s' }}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-[11px] font-bold uppercase tracking-wider text-indigo-400 font-outfit block">
-                4. Professional Seniority Calibrator
-              </label>
-              <select
-                value={experience}
-                onChange={(e) => setExperience(e.target.value)}
-                className="w-full bg-[#0a0d16]/60 border border-indigo-950/60 focus:border-indigo-500/50 rounded-lg py-2.5 px-3 text-xs font-sans text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500/10 transition-all"
-              >
-                <option>Junior-level (0-2 yrs)</option>
-                <option>Mid-level (2-5 yrs)</option>
-                <option>Senior-level (5-8 yrs)</option>
-                <option>Principal/Lead (8+ yrs)</option>
-              </select>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Experience seniority</label>
+                <select value={experience} onChange={e => setExperience(e.target.value)} style={S.inpSelect}>
+                  <option>Junior-level (0-2 yrs)</option>
+                  <option>Mid-level (2-5 yrs)</option>
+                  <option>Senior-level (5-8 yrs)</option>
+                  <option>Principal/Lead (8+ yrs)</option>
+                </select>
+              </div>
             </div>
           </div>
 
         </div>
 
-        {/* Right Hand: Upload & Interactive Parsed Previews */}
-        <div className="md:col-span-6 space-y-6">
+        {/* Right Side previews */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           
           {/* Drag & Drop Upload Container */}
-          <div className="glass-panel p-6 rounded-2xl space-y-4">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-indigo-400 font-outfit flex items-center space-x-2">
-              <UploadCloud className="w-4 h-4 text-indigo-400" />
-              <span>Upload Credentials</span>
-            </h2>
+          <div style={S.card}>
+            <div style={S.sectionTitle}>
+              <UploadCloud size={14} /> 3. Load Professional Profile
+            </div>
 
-            <div 
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              className={`relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 cursor-pointer ${
-                dragActive 
-                  ? 'border-indigo-500 bg-indigo-950/15 scale-[1.01]' 
-                  : 'border-indigo-950/60 hover:border-indigo-800/40 bg-slate-950/30'
-              }`}
+            <div
+              onDragEnter={e => { e.preventDefault(); setDragActive(true); }}
+              onDragOver={e => e.preventDefault()}
+              onDragLeave={() => setDragActive(false)}
+              onDrop={e => { e.preventDefault(); setDragActive(false); if (e.dataTransfer.files?.[0]) processUpload(e.dataTransfer.files[0]); }}
+              style={{
+                position: 'relative', border: '1.5px dashed #222', borderRadius: '10px', padding: '32px 16px', textAlign: 'center', transition: 'all 0.2s', cursor: 'pointer',
+                background: dragActive ? '#151515' : '#0d0d0d', borderColor: dragActive ? '#fff' : '#222',
+              }}
             >
-              <input
-                type="file"
-                accept=".pdf,.docx"
-                onChange={handleFileChange}
-                disabled={isUploading}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              />
-
+              <input type="file" accept=".pdf,.docx" onChange={handleFileChange} disabled={isUploading} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer' }} />
+              
               {isUploading ? (
-                <div className="space-y-4 py-4">
-                  {/* Circular & Horizontal Progress */}
-                  <div className="w-10 h-10 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin mx-auto"></div>
-                  <div className="space-y-1 max-w-[240px] mx-auto">
-                    <p className="text-[11px] text-slate-300 font-bold uppercase tracking-wide animate-pulse">
-                      {loaderMessage}
-                    </p>
-                    <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
-                      <div 
-                        className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-1.5 transition-all duration-300 rounded-full"
-                        style={{ width: `${uploadProgress}%` }}
-                      ></div>
-                    </div>
-                    <span className="text-[9px] font-mono text-slate-500">{uploadProgress}% complete</span>
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '20px', height: '20px', border: '2px solid #555', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                  <span style={{ fontSize: '11px', color: '#ccc' }}>{loaderMessage} ({uploadProgress}%)</span>
                 </div>
               ) : resumeUploaded ? (
-                <div className="space-y-3 py-2">
-                  <div className="w-12 h-12 bg-emerald-950/50 border border-emerald-500/25 rounded-2xl flex items-center justify-center mx-auto text-emerald-400 shadow-md">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="text-[12px] font-bold text-slate-200 truncate max-w-[250px] mx-auto">
-                      {resumeName}
-                    </p>
-                    <p className="text-[9px] text-emerald-400 font-bold uppercase tracking-wider mt-1">
-                      Credentials Loaded & Persisted
-                    </p>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                  <CheckCircle2 size={24} color="#4ade80" />
+                  <span style={{ fontSize: '13px', fontWeight: '500', color: '#fff' }}>{resumeName}</span>
+                  <span style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Profile parsed successfully</span>
+                  <div style={{ padding: '6px 12px', background: '#222', border: '1px solid #333', borderRadius: '4px', fontSize: '11px', fontWeight: '600', color: '#ddd', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                    <UploadCloud size={12} /> Replace PDF
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3 py-2">
-                  <UploadCloud className="w-12 h-12 text-indigo-500 mx-auto animate-float" />
-                  <div>
-                    <p className="text-[12.5px] font-bold text-slate-300">Drag & Drop Resume, or click to upload</p>
-                    <p className="text-[9px] text-slate-500 mt-1 uppercase font-bold tracking-widest">
-                      Supports PDF or DOCX up to 10MB
-                    </p>
-                  </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                  <UploadCloud size={24} color="#888" />
+                  <span style={{ fontSize: '12px', color: '#ccc' }}>Drag and drop resume here, or browse</span>
+                  <span style={{ fontSize: '10px', color: '#888' }}>PDF or DOCX format limits</span>
                 </div>
               )}
             </div>
 
             {errorMessage && (
-              <div className="flex items-center space-x-2.5 p-3.5 bg-rose-950/20 border border-rose-500/25 rounded-xl text-rose-300 text-[11px]">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 12px', background: '#270e0f', border: '1px solid #f87171', borderRadius: '8px', color: '#f87171', fontSize: '11px' }}>
+                <AlertCircle size={14} /> {errorMessage}
               </div>
             )}
           </div>
 
-          {/* Interactive Parsed Data Preview (Renders when resumeUploaded is true) */}
+          {/* Interactive Profile preview */}
           {resumeUploaded && parsedProfile && (
-            <div className="glass-panel p-6 rounded-2xl space-y-4 animate-fade-in">
-              <div className="flex justify-between items-center border-b border-indigo-950/40 pb-3">
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 font-outfit">
-                  AI Profile Preview
-                </h3>
-                <span className="text-[9px] text-cyan-400 font-bold font-mono flex items-center gap-1">✦ Gemini AI</span>
+            <div style={S.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e1e1e', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#ccc' }}>AI extraction preview</span>
+                <span style={{ fontSize: '10px', color: '#888' }}>Gemini-enabled</span>
               </div>
 
-              {/* Profile Preview Tab Bar */}
-              <div className="flex space-x-1 border-b border-indigo-950/20 pb-1">
+              {/* Preview tabs */}
+              <div style={{ display: 'flex', gap: '2px', borderBottom: '1px solid #1e1e1e', paddingBottom: '6px' }}>
                 {[
-                  { id: 'skills', label: 'Tech Stack', icon: Code },
+                  { id: 'skills', label: 'Stack', icon: Code },
                   { id: 'summary', label: 'Summary', icon: Sparkles },
                   { id: 'education', label: 'Education', icon: GraduationCap },
-                  { id: 'experience', label: 'Experience', icon: Briefcase },
                   { id: 'projects', label: 'Projects', icon: FileText }
-                ].map(tab => {
-                  const TabIcon = tab.icon;
-                  const isActive = activePreviewTab === tab.id;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActivePreviewTab(tab.id)}
-                      className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-[10.5px] font-bold tracking-wide font-outfit transition-all duration-300 ${
-                        isActive 
-                          ? 'bg-indigo-950 text-indigo-400 border border-indigo-900/40' 
-                          : 'text-slate-500 hover:text-slate-400'
-                      }`}
-                    >
-                      <TabIcon className="w-3.5 h-3.5" />
-                      <span>{tab.label}</span>
-                    </button>
-                  );
-                })}
+                ].map(t => (
+                  <button key={t.id} onClick={() => setActivePreviewTab(t.id)} style={S.tabBtn(activePreviewTab === t.id)}>
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
-              {/* Dynamic Tab Body Container */}
-              <div className="min-h-[140px] max-h-[220px] overflow-y-auto pr-1">
+              {/* Tab Content */}
+              <div style={{ maxHeight: '120px', overflowY: 'auto', fontSize: '12px', color: '#ddd', lineHeight: '1.6' }}>
                 {activePreviewTab === 'skills' && (
-                  <div className="space-y-2">
-                    <span className="text-[10px] text-slate-400 font-medium font-sans">Skills extracted by Gemini AI ({parsedProfile.skills?.length || 0} found):</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {parsedProfile.skills && parsedProfile.skills.length > 0 ? (
-                        parsedProfile.skills.map(skill => (
-                          <span key={skill} className="px-2 py-0.5 text-[10px] font-bold rounded-md bg-indigo-950/40 border border-indigo-900/30 text-indigo-300">
-                            {skill}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[10px] text-slate-600 italic">No skills extracted. Try re-uploading your resume.</span>
-                      )}
-                    </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {parsedProfile.skills?.map(s => (
+                      <span key={s} style={{ padding: '3px 8px', background: '#1a1a1a', border: '1px solid #222', borderRadius: '4px', fontSize: '11px', color: '#ccc' }}>
+                        {s}
+                      </span>
+                    )) || <span style={{ fontStyle: 'italic', color: '#888' }}>No skills identified</span>}
                   </div>
                 )}
-
                 {activePreviewTab === 'summary' && (
-                  <div className="space-y-2">
-                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1">✦ Gemini Professional Summary</span>
-                    {parsedProfile.summary ? (
-                      <p className="text-[11.5px] text-slate-300 leading-relaxed font-sans bg-indigo-950/20 p-3 rounded-xl border border-indigo-950/40">
-                        {parsedProfile.summary}
-                      </p>
-                    ) : (
-                      <p className="text-[10px] text-slate-600 italic">No summary generated yet. Re-upload your resume to get an AI summary.</p>
-                    )}
-                  </div>
+                  <p style={{ margin: 0 }}>{parsedProfile.summary || 'No career summary parsed.'}</p>
                 )}
-
                 {activePreviewTab === 'education' && (
-                  <div className="space-y-3">
-                    {parsedProfile.education && parsedProfile.education.length > 0 ? (
-                      parsedProfile.education.map((edu, idx) => (
-                        <div key={idx} className="flex items-start space-x-2.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 mt-1.5 shrink-0 animate-pulse"></div>
-                          <p className="text-[11px] font-sans text-slate-300 leading-relaxed">{edu}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-[10px] text-slate-600 italic">No explicit education markers identified.</p>
-                    )}
-                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                    {parsedProfile.education?.map((e, idx) => <li key={idx}>{e}</li>) || <li>No education data</li>}
+                  </ul>
                 )}
-
-                {activePreviewTab === 'experience' && (
-                  <div className="space-y-3">
-                    {parsedProfile.experience && parsedProfile.experience.length > 0 ? (
-                      parsedProfile.experience.map((exp, idx) => (
-                        <div key={idx} className="flex items-start space-x-2.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-purple-400 mt-1.5 shrink-0"></div>
-                          <p className="text-[11px] font-sans text-slate-300 leading-relaxed">{exp}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-[10px] text-slate-600 italic">No structured experience sections parsed.</p>
-                    )}
-                  </div>
-                )}
-
                 {activePreviewTab === 'projects' && (
-                  <div className="space-y-3">
-                    {parsedProfile.projects && parsedProfile.projects.length > 0 ? (
-                      parsedProfile.projects.map((proj, idx) => (
-                        <div key={idx} className="flex items-start space-x-2.5">
-                          <div className="w-1.5 h-1.5 rounded-full bg-amber-400 mt-1.5 shrink-0"></div>
-                          <p className="text-[11px] font-sans text-slate-300 leading-relaxed">{proj}</p>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-[10px] text-slate-600 italic">No personal projects elements extracted.</p>
-                    )}
-                  </div>
+                  <ul style={{ margin: 0, paddingLeft: '16px' }}>
+                    {parsedProfile.projects?.map((p, idx) => <li key={idx}>{p}</li>) || <li>No personal projects parsed</li>}
+                  </ul>
                 )}
               </div>
             </div>
           )}
 
-          {/* Dynamic Job Matching Alignment Card */}
+          {/* Alignment matrix */}
           {matchData && (
-            <div className="glass-panel p-6 rounded-2xl space-y-5 animate-fade-in relative overflow-hidden">
-              {/* Glowing decorative gradient behind card */}
-              <div className="absolute -top-10 -right-10 w-20 h-20 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
-              
-              <div className="flex justify-between items-center border-b border-indigo-950/40 pb-3">
-                <h3 className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 font-outfit">
-                  JD Requirements Analytics
-                </h3>
-                <span className="text-[10px] text-indigo-400 font-bold bg-indigo-950/40 px-2 py-0.5 rounded-md border border-indigo-900/30">
-                  {matchData.jdSkills ? matchData.jdSkills.length : 0} Target Skills Extracted
-                </span>
+            <div style={S.card}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #1e1e1e', paddingBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#ccc' }}>Job Description Overlap</span>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: '#fff' }}>{matchData.matchPercentage}% Compatibility</span>
               </div>
-
-              {/* Compatibility score section */}
-              <div className="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-4">
-                <div className={`p-4 rounded-xl border flex flex-col items-center justify-center font-outfit tracking-wide shrink-0 ${getGlowColor(matchData.matchPercentage)} w-20 h-20 shadow-md`}>
-                  <span className="text-2xl font-black">{matchData.matchPercentage}%</span>
-                  <span className="text-[8px] font-bold uppercase mt-0.5 text-slate-400">Match score</span>
-                </div>
-                
-                <div className="space-y-3 flex-1 w-full">
-                  <p className="text-[11.5px] leading-normal text-slate-300 font-sans">
-                    {matchData.recommendation}
-                  </p>
-                  
-                  {/* Dynamic Progress Bar */}
-                  <div className="space-y-1 w-full">
-                    <div className="flex justify-between text-[9px] font-bold text-slate-500">
-                      <span>COMPATIBILITY INDEX</span>
-                      <span>{matchData.matchPercentage}% MATCH</span>
-                    </div>
-                    <div className="w-full bg-[#070a13] rounded-full h-2 overflow-hidden border border-indigo-950/40">
-                      <div 
-                        className="bg-gradient-to-r from-indigo-500 via-cyan-400 to-emerald-400 h-2 rounded-full transition-all duration-1000"
-                        style={{ width: `${matchData.matchPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
+              <div style={{ fontSize: '12px', color: '#ddd', lineHeight: '1.5' }}>
+                {matchData.recommendation}
               </div>
-
-              {/* Skills Overlays Section */}
-              <div className="space-y-3.5 pt-3 border-t border-indigo-950/40">
-                
-                {/* Matching Skills */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 flex items-center space-x-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                      <span>Matching Stack Matrix:</span>
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-500">{matchData.matchingSkills ? matchData.matchingSkills.length : 0} matching</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 bg-emerald-950/5 p-2 rounded-xl border border-emerald-950/20">
-                    {matchData.matchingSkills && matchData.matchingSkills.length > 0 ? (
-                      matchData.matchingSkills.map(skill => (
-                        <span key={skill} className="px-2 py-0.5 text-[9.5px] font-bold rounded-md bg-emerald-950/40 border border-emerald-500/20 text-emerald-400 shadow shadow-emerald-950">
-                          {skill}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-[10px] text-slate-600 italic px-1">No technology matches identified. Update requirements.</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Missing Skills */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 flex items-center space-x-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-                      <span>Missing Target Technologies:</span>
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-500">{matchData.missingSkills ? matchData.missingSkills.length : 0} missing</span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 bg-amber-950/5 p-2 rounded-xl border border-amber-950/20">
-                    {matchData.missingSkills && matchData.missingSkills.length > 0 ? (
-                      matchData.missingSkills.map(skill => (
-                        <span key={skill} className="px-2 py-0.5 text-[9.5px] font-bold rounded-md bg-amber-950/40 border border-amber-500/20 text-amber-400 shadow shadow-amber-950">
-                          {skill}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-[10px] text-emerald-400 italic px-1">100% overlays matched! Your resume supports all targets.</span>
-                    )}
-                  </div>
-                </div>
-
+              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${matchData.matchPercentage}%`, background: '#fff', borderRadius: '2px', transition: 'width 0.6s' }} />
               </div>
             </div>
           )}
 
-          {/* Start CTA Button */}
+          {/* CTA */}
           <button
             onClick={handleStartInterview}
-            className="w-full group py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/10 hover:shadow-indigo-500/35 transition-all duration-300 flex items-center justify-center space-x-2 relative overflow-hidden"
+            style={{
+              width: '100%', padding: '12px 24px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
+            }}
           >
-            <span className="font-outfit text-xs tracking-widest uppercase">Start Interview</span>
-            <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
+            Launch Interview Session <ChevronRight size={15} />
           </button>
 
         </div>

@@ -15,7 +15,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
   const [currentTab, setCurrentTab] = useState(token ? 'home' : 'login');
-  
+
   const [globalState, setGlobalState] = useState({
     role: 'Frontend Engineer',
     experience: 'Mid-level (2-5 yrs)',
@@ -27,114 +27,50 @@ export default function App() {
     finalCode: '',
     codeRating: '',
     completedTime: '',
+    violationCount: 0,
   });
 
-  // Verify auth session on mount
   useEffect(() => {
     if (token) {
-      fetch('/api/auth/me', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-        .then(res => res.json())
-        .then(resJson => {
-          if (resJson.success && resJson.data) {
-            setUser(resJson.data);
-            if (currentTab === 'login' || currentTab === 'signup') {
-              setCurrentTab('home');
-            }
-          } else {
-            localStorage.removeItem('camsense_token');
-            setToken('');
-            setCurrentTab('login');
-          }
+      fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success && d.data) { setUser(d.data); if (currentTab === 'login' || currentTab === 'signup') setCurrentTab('home'); }
+          else { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab('login'); }
         })
-        .catch(err => {
-          console.error('Session validation connection failure:', err);
-          localStorage.removeItem('camsense_token');
-          setToken('');
-          setCurrentTab('login');
-        })
-        .finally(() => {
-          setCheckingAuth(false);
-        });
+        .catch(() => { localStorage.removeItem('camsense_token'); setToken(''); setCurrentTab('login'); })
+        .finally(() => setCheckingAuth(false));
     } else {
       setCheckingAuth(false);
-      if (currentTab !== 'signup') {
-        setCurrentTab('login');
-      }
+      if (currentTab !== 'signup') setCurrentTab('login');
     }
   }, [token]);
 
   const handleLogout = async () => {
-    try {
-      await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-    } catch (err) {
-      console.warn('Offline logout triggered');
-    } finally {
-      localStorage.removeItem('camsense_token');
-      setToken('');
-      setUser(null);
-      setCurrentTab('login');
-    }
+    try { await fetch('/api/auth/logout', { method: 'POST', headers: { Authorization: `Bearer ${token}` } }); } catch {}
+    localStorage.removeItem('camsense_token');
+    setToken(''); setUser(null); setCurrentTab('login');
   };
 
   const renderContent = () => {
     switch (currentTab) {
-      case 'login':
-        return <Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
-      case 'signup':
-        return <Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
-      case 'home':
-        return <Home setCurrentTab={setCurrentTab} />;
-      case 'setup':
-        return (
-          <InterviewSetup
-            setGlobalState={setGlobalState}
-            setCurrentTab={setCurrentTab}
-          />
-        );
-      case 'session':
-        return (
-          <InterviewSession
-            globalState={globalState}
-            setGlobalState={setGlobalState}
-            setCurrentTab={setCurrentTab}
-          />
-        );
-      case 'coding':
-        return (
-          <CodingTest
-            globalState={globalState}
-            setGlobalState={setGlobalState}
-            setCurrentTab={setCurrentTab}
-          />
-        );
-      case 'result':
-        return <Result globalState={globalState} setCurrentTab={setCurrentTab} />;
-      default:
-        return <Home setCurrentTab={setCurrentTab} />;
+      case 'login': return <Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
+      case 'signup': return <Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
+      case 'home': return <Home setCurrentTab={setCurrentTab} />;
+      case 'setup': return <InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
+      case 'session': return <InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
+      case 'coding': return <CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
+      case 'result': return <Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
+      default: return <Home setCurrentTab={setCurrentTab} />;
     }
   };
 
   if (checkingAuth) {
     return (
-      <div className="flex min-h-screen bg-[#070b13] items-center justify-center space-y-4 flex-col text-slate-100 font-sans">
-        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-        <div className="text-center space-y-1">
-          <p className="text-sm font-bold uppercase tracking-widest text-slate-300 font-outfit">
-            Synchronizing Secure Identity
-          </p>
-          <p className="text-xs text-slate-500 font-mono">
-            Verifying cryptographic keys with assessment network...
-          </p>
-        </div>
+      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', fontFamily: 'Inter, sans-serif' }}>
+        <Loader2 size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontSize: '13px', color: '#555' }}>Verifying session…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -142,24 +78,11 @@ export default function App() {
   const isAuthPage = currentTab === 'login' || currentTab === 'signup';
 
   return (
-    <div className="flex min-h-screen bg-[#070b13] text-slate-100 font-sans selection:bg-indigo-500/25 selection:text-white">
-      {/* Sidebar navigation rendered only for verified users */}
-      {!isAuthPage && (
-        <Sidebar 
-          currentTab={currentTab} 
-          setCurrentTab={setCurrentTab} 
-          user={user} 
-          onLogout={handleLogout} 
-        />
-      )}
-
-      {/* Main viewport block */}
-      <div className="flex-1 flex flex-col min-w-0">
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0a', fontFamily: 'Inter, sans-serif', color: '#e0e0e0' }}>
+      {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {!isAuthPage && <Navbar />}
-        
-        {/* Scrollable page body */}
-        <main className={`flex-1 overflow-y-auto px-8 py-6 relative z-10 ${isAuthPage ? 'flex items-center justify-center' : ''}`}>
-          <div className="absolute inset-0 bg-[#070b13]/60 -z-10 pointer-events-none"></div>
+        <main style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
           {renderContent()}
         </main>
       </div>

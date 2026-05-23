@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Download, CheckCircle, RefreshCw, ChevronDown, ChevronUp, Star, ShieldAlert, Sparkles, MessageSquare, BookOpen, ThumbsUp, HelpCircle } from 'lucide-react';
+import { Award, Download, CheckCircle, RefreshCw, Sparkles, BookOpen, ThumbsUp, HelpCircle, AlertCircle } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 
-export default function Result({ globalState, setCurrentTab }) {
+export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const experience = globalState.experience || 'Mid-level (2-5 yrs)';
   const interviewId = globalState.interviewId || 'demo_session_active';
@@ -11,9 +11,7 @@ export default function Result({ globalState, setCurrentTab }) {
   const [reportData, setReportData] = useState(null);
   const [downloading, setDownloading] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
-  const [showTranscript, setShowTranscript] = useState(false);
 
-  // Dynamic fetch to analyze session answers and generate the final report
   const synthesizeReport = async () => {
     setLoading(true);
     try {
@@ -23,19 +21,22 @@ export default function Result({ globalState, setCurrentTab }) {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer demo_token_active'
         },
-        body: JSON.stringify({
-          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId
-        })
+        body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId })
       });
-
       const resJson = await response.json();
       if (resJson.success && resJson.data) {
-        setReportData(resJson.data);
+        let data = resJson.data;
+        const violations = globalState.violationCount || 0;
+        if (violations > 0) {
+          const deduction = Math.min(violations * 5, 25);
+          data.overallScore = Math.max(0, data.overallScore - deduction);
+          data.weaknesses = [...(data.weaknesses || []), `Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`];
+        }
+        setReportData(data);
       } else {
         triggerLocalFallback();
       }
-    } catch (err) {
-      console.warn('Report synthesis query failed, triggering local AI evaluation:', err);
+    } catch {
       triggerLocalFallback();
     } finally {
       setLoading(false);
@@ -43,20 +44,32 @@ export default function Result({ globalState, setCurrentTab }) {
   };
 
   const triggerLocalFallback = () => {
-    // High-fidelity fallback based on role selection
     const isCodeGood = !!globalState.finalCode;
-    const technical = isCodeGood ? 88 : 72;
+    const codingScore = globalState.codingScore || (isCodeGood ? 90 : 40);
+    const qScores = globalState.questionScores || [];
+    const avgQScores = qScores.length > 0 ? Math.round(qScores.reduce((a, b) => a + b, 0) / qScores.length) : (isCodeGood ? 85 : 70);
+
+    const technical = Math.round((avgQScores + codingScore) / 2);
     const communication = 85;
-    const overall = Math.round((technical + communication) / 2);
+    let overall = Math.round((technical + communication) / 2);
 
-    const breakdowns = {
-      'Frontend Engineer': { syntaxAccuracy: 92, systemScalability: 85, verbalCommunication: 88, complexityOptimization: 90 },
-      'Backend Engineer': { syntaxAccuracy: 95, systemScalability: 92, verbalCommunication: 84, complexityOptimization: 89 },
-      'Fullstack Engineer': { syntaxAccuracy: 90, systemScalability: 88, verbalCommunication: 91, complexityOptimization: 86 },
-      'AI / ML Engineer': { syntaxAccuracy: 93, systemScalability: 90, verbalCommunication: 87, complexityOptimization: 94 }
+    const violations = globalState.violationCount || 0;
+    const deduction = Math.min(violations * 5, 25);
+    overall = Math.max(0, overall - deduction);
+
+    const rawBreakdowns = {
+      'Frontend Engineer': { syntaxAccuracy: Math.round(codingScore * 1.02), systemScalability: Math.round(avgQScores * 0.98), verbalCommunication: 88, complexityOptimization: Math.round(codingScore * 0.95) },
+      'Backend Engineer': { syntaxAccuracy: Math.round(codingScore * 1.05), systemScalability: Math.round(avgQScores * 0.95), verbalCommunication: 84, complexityOptimization: Math.round(codingScore * 0.98) },
+      'Fullstack Engineer': { syntaxAccuracy: Math.round(codingScore * 1.01), systemScalability: Math.round(avgQScores * 0.99), verbalCommunication: 91, complexityOptimization: Math.round(codingScore * 0.96) },
+      'AI / ML Engineer': { syntaxAccuracy: Math.round(codingScore * 1.03), systemScalability: Math.round(avgQScores * 0.97), verbalCommunication: 87, complexityOptimization: Math.round(codingScore * 0.94) }
     };
-
-    const breakdown = breakdowns[selectedRole] || breakdowns['Frontend Engineer'];
+    const selectedBreakdown = rawBreakdowns[selectedRole] || rawBreakdowns['Frontend Engineer'];
+    const breakdown = {
+      syntaxAccuracy: Math.min(Math.max(selectedBreakdown.syntaxAccuracy || 80, 0), 100),
+      systemScalability: Math.min(Math.max(selectedBreakdown.systemScalability || 80, 0), 100),
+      verbalCommunication: Math.min(Math.max(selectedBreakdown.verbalCommunication || 80, 0), 100),
+      complexityOptimization: Math.min(Math.max(selectedBreakdown.complexityOptimization || 80, 0), 100),
+    };
 
     setReportData({
       overallScore: overall,
@@ -69,13 +82,14 @@ export default function Result({ globalState, setCurrentTab }) {
       ],
       weaknesses: [
         'Could elaborate further on multi-threaded garbage collection limits.',
-        'Aim to explain low-level cache structures during high database load scenarios.'
+        'Aim to explain low-level cache structures during high database load scenarios.',
+        ...(violations > 0 ? [`Integrity Warning: Detected ${violations} instance(s) of tab-switching or exiting fullscreen mode.`] : [])
       ],
       feedbackReport: `### AI INTERVIEW FEEDBACK REPORT
       
 **Role:** ${selectedRole}
 **Experience:** ${experience}
-**Verdict:** Strongly Recommended
+**Verdict:** ${overall >= 80 ? 'Strongly Recommended' : 'Recommended with reservations'}
 
 The candidate demonstrated robust theoretical scaling mastery. Code sandbox tests passed within optimal limits. Elaborating on memory concurrency threads will secure direct placement on top-tier tracks.`,
       feedbackLogs: [
@@ -85,181 +99,102 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
     });
   };
 
-  useEffect(() => {
-    synthesizeReport();
-  }, [interviewId, selectedRole]);
+  useEffect(() => { synthesizeReport(); }, [interviewId, selectedRole]);
 
   const handleDownload = () => {
     if (!reportData) return;
     setDownloading(true);
     setDownloaded(false);
-    
     setTimeout(() => {
       setDownloading(false);
       setDownloaded(true);
-      
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
 
-      // Styling parameters
-      const colPrimary = [30, 27, 75]; // Deep Indigo
-      const colSecondary = [15, 23, 42]; // Slate
-      const colAccent = [16, 185, 129]; // Emerald
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const colPrimary = [15, 15, 15]; // Pure deep black/grey for minimal layout
+      const colAccent = [50, 50, 50];
 
-      // --- Title Banner ---
       doc.setFillColor(...colPrimary);
-      doc.rect(0, 0, 210, 38, 'F');
+      doc.rect(0, 0, 210, 32, 'F');
 
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.text('CAMSENSE AI EVALUATION', 15, 16);
+      doc.setFontSize(20);
+      doc.text('CAMSENSE AI ASSESSMENT', 15, 15);
 
       doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(150, 150, 150);
+      doc.text('CANDIDATE INTERVIEW COMPOSITE PERFORMANCE REPORT', 15, 23);
+
+      let y = 45;
+      doc.setDrawColor(220, 220, 220);
+      doc.setFillColor(250, 250, 250);
+      doc.rect(14, y, 182, 28, 'FD');
+
+      doc.setTextColor(15, 15, 15);
+      doc.setFont('helvetica', 'bold');
       doc.setFontSize(10);
-      doc.setTextColor(191, 219, 254);
-      doc.text('AUTOMATED CANDIDATE TELEMETRY PERFORMANCE REPORT', 15, 24);
+      doc.text('ASSESSMENT DATA METRICS', 18, y + 7);
 
-      // --- Content Boundaries ---
-      let y = 50;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      doc.text(`Candidate: Camsense Platform Participant`, 18, y + 14);
+      doc.text(`Target Track: ${selectedRole}`, 18, y + 20);
+      doc.text(`Difficulty: ${globalState.difficulty || 'Medium'}`, 110, y + 14);
+      doc.text(`Overall Score: ${reportData.overallScore}%`, 110, y + 20);
 
-      // Candidate Details Block
-      doc.setDrawColor(226, 232, 240);
-      doc.setFillColor(248, 250, 252);
-      doc.rect(14, y, 182, 32, 'FD');
+      y += 40;
+      doc.setDrawColor(15, 15, 15);
+      doc.line(14, y, 196, y);
 
-      doc.setTextColor(...colSecondary);
+      doc.setTextColor(...colPrimary);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(11);
-      doc.text('ASSESSMENT PARAMETERS', 18, y + 8);
+      doc.text('COMPOSITE SCORES BREAKDOWN', 14, y + 7);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Candidate Name:  Camsense Platform Participant`, 18, y + 16);
-      doc.text(`Target Role Track:  ${selectedRole}`, 18, y + 22);
-      doc.text(`Experience Level:  ${experience}`, 18, y + 28);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(14, y + 12, 56, 16, 'F');
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.text('OVERALL SCORE', 18, y + 18);
+      doc.setTextColor(15, 15, 15);
+      doc.setFontSize(12);
+      doc.text(`${reportData.overallScore}%`, 18, y + 25);
 
-      doc.text(`Recommendation:`, 112, y + 16);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...colAccent);
-      doc.text(reportData.overallScore > 80 ? 'EXCEEDS HIRING BAR' : 'PASS THRESHOLD MET', 145, y + 16);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(76, y + 12, 56, 16, 'F');
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.text('TECHNICAL SCORE', 80, y + 18);
+      doc.setTextColor(15, 15, 15);
+      doc.setFontSize(12);
+      doc.text(`${reportData.technicalScore}%`, 80, y + 25);
 
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Timestamp: ${new Date().toLocaleDateString()}`, 112, y + 22);
-      doc.text(`Telemetry Status: LOCKED / ENCRYPTED`, 112, y + 28);
+      doc.setFillColor(245, 245, 245);
+      doc.rect(138, y + 12, 56, 16, 'F');
+      doc.setTextColor(100, 100, 100);
+      doc.setFontSize(8);
+      doc.text('VERBAL CLARITY', 142, y + 18);
+      doc.setTextColor(15, 15, 15);
+      doc.setFontSize(12);
+      doc.text(`${reportData.communicationScore}%`, 142, y + 25);
 
-      // --- Scoring Block ---
-      y += 44;
-      doc.setDrawColor(...colPrimary);
-      doc.line(14, y, 196, y);
-
+      y += 42;
       doc.setTextColor(...colPrimary);
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('COMPOSITE GRADINGS', 14, y + 8);
-
-      // Score Cards
-      const scores = [
-        { label: 'Overall Score', value: `${reportData.overallScore}%` },
-        { label: 'Technical Score', value: `${reportData.technicalScore}%` },
-        { label: 'Verbal Clarity', value: `${reportData.communicationScore}%` }
-      ];
-
-      scores.forEach((sc, idx) => {
-        const xPos = 14 + (idx * 62);
-        doc.setFillColor(241, 245, 249);
-        doc.rect(xPos, y + 14, 56, 18, 'F');
-        
-        doc.setTextColor(100, 116, 139);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.text(sc.label.toUpperCase(), xPos + 4, y + 20);
-
-        doc.setTextColor(...colPrimary);
-        doc.setFontSize(14);
-        doc.text(sc.value, xPos + 4, y + 28);
-      });
-
-      // --- Strengths & Weaknesses Block ---
-      y += 44;
-      doc.setTextColor(...colPrimary);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('STRENGTHS & IMPROVEMENTS', 14, y);
-
-      // Strengths column
-      doc.setTextColor(...colAccent);
-      doc.setFontSize(10);
-      doc.text('🌟 CORE STRENGTHS', 14, y + 8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105);
-      doc.setFontSize(9);
-      
-      let sY = y + 14;
-      reportData.strengths.forEach((s, idx) => {
-        doc.text(`• ${s}`, 14, sY, { maxWidth: 86 });
-        sY += 12;
-      });
-
-      // Weaknesses column
-      doc.setTextColor(245, 158, 11);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('🔧 AREAS FOR IMPROVEMENT', 110, y + 8);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(71, 85, 105);
-      doc.setFontSize(9);
-
-      let wY = y + 14;
-      reportData.weaknesses.forEach((w, idx) => {
-        doc.text(`• ${w}`, 110, wY, { maxWidth: 86 });
-        wY += 12;
-      });
-
-      // --- Coding Performance ---
-      y += 40;
-      doc.setDrawColor(226, 232, 240);
-      doc.line(14, y, 196, y);
-
-      doc.setTextColor(...colPrimary);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.text('CODING SANDBOX PERFORMANCE', 14, y + 8);
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9.5);
-      doc.setTextColor(71, 85, 105);
-      doc.text(`Target Language: ${globalState.codingLanguage ? globalState.codingLanguage.toUpperCase() : 'JAVASCRIPT'}`, 14, y + 16);
-      doc.text(`Execution Status: ALL ASSERTIONS PASSED`, 14, y + 22);
-      doc.text(`Compiler Grade Score: ${globalState.codeRating || '95/100'}`, 110, y + 16);
-      doc.text(`Runtime Benchmarks: 31ms / 14MB Heap`, 110, y + 22);
-
-      // --- AI Verdict ---
-      y += 32;
-      doc.setFillColor(243, 232, 255);
-      doc.setDrawColor(216, 180, 254);
-      doc.rect(14, y, 182, 32, 'FD');
-
-      doc.setTextColor(107, 33, 168);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.text('🔮 FINAL AI SYNTHESIS SUMMARY', 18, y + 8);
+      doc.setFontSize(11);
+      doc.text('AI INTERVIEW VERDICT REPORT', 14, y);
 
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(126, 34, 206);
-      const verdictSnippet = reportData.feedbackReport.replace(/###|##|#|\*/g, '').trim();
-      doc.text(verdictSnippet.substring(0, 360) + '...', 18, y + 16, { maxWidth: 174 });
+      doc.setTextColor(100, 100, 100);
+      const snippet = reportData.feedbackReport.replace(/###|##|#|\*/g, '').trim();
+      doc.text(snippet, 14, y + 8, { maxWidth: 182 });
 
-      // Footer
       doc.setFontSize(7.5);
-      doc.setTextColor(148, 163, 184);
-      doc.text('REPORT GENERATED BY CAMSENSE PROSECUTOR COMPILER ENGINE © 2026. CONFIDENTIAL.', 14, 288);
+      doc.setTextColor(180, 180, 180);
+      doc.text('REPORT GENERATED BY CAMSENSE AI ENGINE. CONFIDENTIAL.', 14, 285);
 
       doc.save(`camsense_assessment_${selectedRole.toLowerCase().replace(/\s+/g, '_')}.pdf`);
     }, 2000);
@@ -267,16 +202,10 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
 
   if (loading) {
     return (
-      <div className="max-w-4xl mx-auto py-20 flex flex-col items-center justify-center space-y-4">
-        <RefreshCw className="w-10 h-10 text-indigo-400 animate-spin" />
-        <div className="text-center space-y-1.5">
-          <p className="text-sm font-bold uppercase tracking-widest text-slate-300 font-outfit">
-            Synthesizing Performance Analytics
-          </p>
-          <p className="text-xs text-slate-500 font-mono">
-            Evaluating speech responses, webcam metrics, and code sandbox test cases...
-          </p>
-        </div>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', background: '#0a0a0a', fontFamily: 'Inter, sans-serif' }}>
+        <RefreshCw size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
+        <p style={{ fontSize: '13px', color: '#555' }}>Synthesizing assessment report diagnostics…</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -284,164 +213,113 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
   const report = reportData || {};
 
   return (
-    <div className="max-w-4xl mx-auto py-6 space-y-10">
+    <div style={{ maxWidth: '840px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
       
-      {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-extrabold font-outfit text-white tracking-tight">
-          AI Interview Evaluation Chamber
-        </h1>
-        <p className="text-sm text-slate-400">
-          Composite analytics compiled from voice response clarity, algorithmic test suites, and focus telemetry.
+      {/* Page Title */}
+      <div style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Interview evaluation report</h1>
+        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
+          Composite analytics compiled from voice response, algorithmic sandbox compilation test suites, and focus telemetry metrics.
         </p>
       </div>
 
-      {/* Grid: Left Scorecard, Right Breakdowns */}
-      <div className="grid md:grid-cols-5 gap-8">
+      <div style={{ display: 'grid', gridTemplateColumns: '4fr 6fr', gap: '24px', marginBottom: '24px' }}>
         
-        {/* Composite score card (2/5 cols) */}
-        <div className="md:col-span-2 glass-panel p-8 rounded-3xl text-center relative overflow-hidden flex flex-col justify-between border-indigo-950/40">
-          <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-cyan-400 via-indigo-500 to-purple-500"></div>
-          
-          <div className="space-y-4">
-            <span className="text-[10px] font-bold text-cyan-400 uppercase tracking-widest font-outfit">
-              AI Composite Grading
-            </span>
-            
-            <div className="relative inline-flex items-center justify-center">
-              <div className="absolute inset-0 bg-indigo-500/10 rounded-full blur-xl animate-pulse"></div>
-              
-              <div className="w-40 h-40 rounded-full bg-[#060910] border-4 border-indigo-950 flex flex-col items-center justify-center relative z-10">
-                <span className="text-5xl font-extrabold font-outfit text-white leading-none tracking-tighter">
-                  {report.overallScore}%
-                </span>
-                <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mt-2 font-mono">
-                  {report.overallScore > 85 ? 'Grade A' : 'Grade B'}
-                </span>
-              </div>
+        {/* Composite score card */}
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
+          <div>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#aaa', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '16px' }}>AI Composite Grading</span>
+            <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#0d0d0d', border: '2px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <span style={{ fontSize: '32px', fontWeight: '700', color: '#fff' }}>{report.overallScore}%</span>
+              <span style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>{report.overallScore > 85 ? 'Grade A' : 'Grade B'}</span>
             </div>
           </div>
 
-          <div className="mt-8 space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
-              <p className="text-sm font-bold text-slate-200 font-outfit">
-                {report.overallScore > 80 ? 'Hiring Threshold Exceeded' : 'Under Consideration'}
+              <p style={{ fontSize: '14px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>
+                {report.overallScore > 80 ? 'Hiring Threshold Exceeded' : 'Pass Threshold Met'}
               </p>
-              <p className="text-[11px] text-slate-400 mt-1 leading-normal font-sans">
-                Algorithm optimization and verbal description profiles place you among targeted track indicators.
+              <p style={{ fontSize: '12px', color: '#aaa', lineHeight: '1.4', margin: 0 }}>
+                Algorithm optimization and verbal description profiles place you among target candidate benchmarks.
               </p>
             </div>
 
             <button
               onClick={handleDownload}
               disabled={downloading}
-              className={`w-full group py-3 rounded-xl font-bold font-outfit text-xs tracking-wider uppercase transition-all duration-300 flex items-center justify-center space-x-2 ${
-                downloading
-                  ? 'bg-indigo-950/60 border border-indigo-900/30 text-indigo-400'
-                  : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow shadow-indigo-600/15 hover:shadow-indigo-500/30'
-              }`}
+              style={{
+                width: '100%', padding: '10px', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: downloading ? 'not-allowed' : 'pointer',
+                background: downloading ? '#1a1a1a' : '#fff',
+                color: downloading ? '#555' : '#000',
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+              }}
             >
-              {downloading ? (
-                <>
-                  <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-                  <span>Compiling PDF Telemetry...</span>
-                </>
-              ) : downloaded ? (
-                <>
-                  <CheckCircle className="w-4 h-4 text-emerald-400" />
-                  <span>Report Downloaded</span>
-                </>
-              ) : (
-                <>
-                  <Download className="w-4 h-4" />
-                  <span>Export System PDF</span>
-                </>
-              )}
+              {downloading ? 'Compiling PDF…' : downloaded ? 'Report Exported' : 'Export System PDF'}
             </button>
           </div>
         </div>
 
-        {/* Aptitude break downs (3/5 cols) */}
-        <div className="md:col-span-3 glass-panel p-8 rounded-3xl space-y-6 border-indigo-950/40">
-          <h2 className="text-sm font-bold uppercase tracking-widest text-indigo-400 font-outfit">
+        {/* Aptitude Matrix Breakdown */}
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <h2 style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase', margin: 0 }}>
             Aptitude Matrix Breakdown
           </h2>
 
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-300 font-outfit">Technical Capability Score</span>
-                <span className="text-slate-400 font-mono font-bold">{report.technicalScore}%</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
+                <span style={{ color: '#ccc' }}>Technical & coding capability</span>
+                <span style={{ color: '#fff', fontWeight: '600' }}>{report.technicalScore}%</span>
               </div>
-              <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-indigo-950/50">
-                <div 
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-1000"
-                  style={{ width: `${report.technicalScore}%` }}
-                ></div>
+              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${report.technicalScore}%`, background: '#fff', borderRadius: '2px' }} />
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-slate-300 font-outfit">Verbal & Communication Score</span>
-                <span className="text-slate-400 font-mono font-bold">{report.communicationScore}%</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
+                <span style={{ color: '#ccc' }}>Verbal explanation & clarity</span>
+                <span style={{ color: '#fff', fontWeight: '600' }}>{report.communicationScore}%</span>
               </div>
-              <div className="w-full h-2 bg-slate-950 rounded-full overflow-hidden border border-indigo-950/50">
-                <div 
-                  className="h-full bg-gradient-to-r from-cyan-500 to-indigo-400 rounded-full transition-all duration-1000"
-                  style={{ width: `${report.communicationScore}%` }}
-                ></div>
+              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${report.communicationScore}%`, background: '#fff', borderRadius: '2px' }} />
               </div>
             </div>
           </div>
 
-          <div className="p-4 bg-indigo-950/20 border border-indigo-900/30 rounded-xl flex items-start space-x-3 mt-4">
-            <Sparkles className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[11px] font-bold text-indigo-300 font-outfit uppercase tracking-wider">
-                Automated Hiring Recommendation
-              </p>
-              <p className="text-[11px] text-slate-400 leading-relaxed mt-1 font-sans">
-                Review the strengths and weaknesses matrices below to identify structural tech-stack overlaps and latency optimizations.
-              </p>
-            </div>
+          <div style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <span style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase' }}>Hiring recommendation verdict</span>
+            <p style={{ fontSize: '12px', color: '#aaa', lineHeight: '1.5', margin: 0 }}>
+              Review the structural strengths and areas of improvements below to identify capability overlaps and algorithmic enhancements.
+            </p>
           </div>
         </div>
 
       </div>
 
-      {/* Strengths & Weaknesses Grid */}
-      <div className="grid md:grid-cols-2 gap-8">
+      {/* Strengths & Weaknesses */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
         
         {/* Strengths Card */}
-        <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-emerald-500 border-indigo-950/40 space-y-4">
-          <div className="flex items-center space-x-2">
-            <ThumbsUp className="w-5 h-5 text-emerald-400 animate-bounce" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-400 font-outfit">
-              🌟 Core Strengths
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {report.strengths?.map((strength, idx) => (
-              <div key={idx} className="flex items-start space-x-2.5 p-3 bg-emerald-950/10 border border-emerald-950/30 rounded-xl">
-                <span className="text-[11.5px] leading-relaxed text-slate-300 font-sans">{strength}</span>
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderLeft: '3px solid #fff', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🌟 Core Strengths</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {report.strengths?.map((s, idx) => (
+              <div key={idx} style={{ padding: '10px 12px', background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', fontSize: '12px', color: '#ccc', lineHeight: '1.5' }}>
+                {s}
               </div>
             ))}
           </div>
         </div>
 
         {/* Weaknesses Card */}
-        <div className="glass-panel p-6 rounded-3xl border-l-4 border-l-amber-500 border-indigo-950/40 space-y-4">
-          <div className="flex items-center space-x-2">
-            <HelpCircle className="w-5 h-5 text-amber-400 animate-pulse" />
-            <h2 className="text-sm font-bold uppercase tracking-widest text-amber-400 font-outfit">
-              🔧 Areas For Improvement
-            </h2>
-          </div>
-          <div className="space-y-3">
-            {report.weaknesses?.map((weakness, idx) => (
-              <div key={idx} className="flex items-start space-x-2.5 p-3 bg-amber-950/10 border border-amber-950/30 rounded-xl">
-                <span className="text-[11.5px] leading-relaxed text-slate-300 font-sans">{weakness}</span>
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderLeft: '3px solid #555', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase' }}>🔧 Areas for Improvement</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {report.weaknesses?.map((w, idx) => (
+              <div key={idx} style={{ padding: '10px 12px', background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', fontSize: '12px', color: '#ccc', lineHeight: '1.5' }}>
+                {w}
               </div>
             ))}
           </div>
@@ -449,27 +327,51 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
 
       </div>
 
-      {/* Deep Feedback Verdict Markdown Report Card */}
-      <div className="glass-panel p-6 rounded-3xl border-indigo-950/40 space-y-4 bg-slate-950/10">
-        <div className="flex items-center space-x-2 pb-2 border-b border-indigo-950/20">
-          <BookOpen className="w-5 h-5 text-purple-400" />
-          <h2 className="text-sm font-bold uppercase tracking-widest text-purple-400 font-outfit">
-            AI Synthesis Final Verdict
-          </h2>
-        </div>
-        <div className="text-[12px] leading-relaxed text-slate-300 font-sans whitespace-pre-line prose prose-invert">
-          {report.feedbackReport || 'Compiling feedback report diagnostics...'}
-        </div>
+      {/* Verdict text details */}
+      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '32px' }}>
+        <span style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #1e1e1e', paddingBottom: '8px' }}>AI Synthesis Verdict Report</span>
+        <p style={{ fontSize: '12px', color: '#ccc', lineHeight: '1.6', whiteSpace: 'pre-line', margin: 0 }}>
+          {report.feedbackReport?.replace(/###|##|#|\*/g, '').trim()}
+        </p>
       </div>
 
-      {/* Restart trigger */}
-      <div className="flex justify-center pt-2">
+      {/* Integrity Telemetry */}
+      {(globalState.violationCount > 0) && (
+        <div style={{ background: '#111', border: '1px solid #ff4444', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '32px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: '#ff4444', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #270e0f', paddingBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <AlertCircle size={16} /> Integrity Telemetry Warning
+          </span>
+          <p style={{ fontSize: '12px', color: '#ccc', lineHeight: '1.6', margin: 0 }}>
+            This candidate exited fullscreen mode or switched tabs <strong>{globalState.violationCount}</strong> time(s) during the assessment. 
+            A total of <strong>{Math.min(globalState.violationCount * 5, 25)} points</strong> have been automatically deducted from their final overall score.
+          </p>
+        </div>
+      )}
+
+      {/* Restart CTA */}
+      <div style={{ display: 'flex', justifyContent: 'center' }}>
         <button
-          onClick={() => setCurrentTab('setup')}
-          className="px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white font-bold rounded-xl border border-indigo-950 hover:border-indigo-800/40 transition-all duration-300 flex items-center space-x-2 font-outfit text-sm"
+          onClick={() => {
+            setGlobalState(prev => ({
+              ...prev,
+              resumeUploaded: false,
+              resumeName: '',
+              jobDescription: '',
+              userAnswers: [],
+              finalCode: '',
+              codeRating: '',
+              completedTime: '',
+              violationCount: 0,
+              questions: []
+            }));
+            setCurrentTab('setup');
+          }}
+          style={{
+            padding: '12px 28px', background: '#111', color: '#ccc', border: '1px solid #222', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: '6px', transition: 'all 0.15s'
+          }}
         >
-          <RefreshCw className="w-4 h-4 text-cyan-400" />
-          <span>Launch New Assessment Chamber</span>
+          <RefreshCw size={13} /> Launch new assessment loop
         </button>
       </div>
 

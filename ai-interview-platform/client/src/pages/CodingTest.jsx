@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Code2, Terminal, Play, CheckSquare, ChevronRight, FileCode, Check, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
+import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
 import Editor from '@monaco-editor/react';
 
 const LANGUAGE_BOILERPLATES = {
@@ -104,7 +104,9 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
   const [isRunning, setIsRunning] = useState(false);
   const [evalReport, setEvalReport] = useState(null);
 
-  // Verbal explanation captures
+  const [hasStarted, setHasStarted] = useState(false);
+  const [isCheatWarningVisible, setIsCheatWarningVisible] = useState(false);
+
   const [isRecording, setIsRecording] = useState(false);
   const [explanationText, setExplanationText] = useState('');
   const recognitionRef = useRef(null);
@@ -113,21 +115,53 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
     const defaultBoilerplate = LANGUAGE_BOILERPLATES[language]?.[selectedRole] || '';
     setCode(defaultBoilerplate);
     setConsoleLogs([
-      "// Environment Sandbox Initialized.",
-      `// System: ${LANGUAGE_BOILERPLATES[language]?.label} compiler loaded.`,
-      "// Press 'Run Execution' to compile test cases."
+      "// Sandbox initialized successfully.",
+      `// Compiler environment: ${LANGUAGE_BOILERPLATES[language]?.label}`,
+      "// Press 'Run execution' to evaluate assertion test cases."
     ]);
     setEvalReport(null);
   }, [selectedRole, language]);
 
-  const handleLanguageChange = (lang) => {
-    setLanguage(lang);
+  useEffect(() => {
+    if (!hasStarted || isCheatWarningVisible) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) handleViolation();
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) handleViolation();
+    };
+
+    const handleViolation = () => {
+      setIsCheatWarningVisible(true);
+      if (recognitionRef.current) recognitionRef.current.stop();
+      if (window.codingSimInterval) clearInterval(window.codingSimInterval);
+      setIsRecording(false);
+      setGlobalState(prev => ({ ...prev, violationCount: (prev.violationCount || 0) + 1 }));
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+    };
+  }, [hasStarted, isCheatWarningVisible]);
+
+  const handleBeginTest = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+    } catch (err) {
+      console.warn("Fullscreen request failed", err);
+    }
+    setHasStarted(true);
   };
 
   const startVoiceRecording = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      // Simulate transcription fallback
       setIsRecording(true);
       setExplanationText('');
       const simPhrases = [
@@ -170,15 +204,10 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
           finalStr += e.results[i][0].transcript + ' ';
         }
       }
-      if (finalStr) {
-        setExplanationText(prev => prev + finalStr);
-      }
+      if (finalStr) setExplanationText(prev => prev + finalStr);
     };
 
-    rec.onend = () => {
-      setIsRecording(false);
-    };
-
+    rec.onend = () => setIsRecording(false);
     recognitionRef.current = rec;
     rec.start();
   };
@@ -190,16 +219,13 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
   };
 
   const toggleRecording = () => {
-    if (isRecording) {
-      stopVoiceRecording();
-    } else {
-      startVoiceRecording();
-    }
+    if (isRecording) stopVoiceRecording();
+    else startVoiceRecording();
   };
 
   const executeCode = async () => {
     setIsRunning(true);
-    setConsoleLogs(prev => [...prev, `> Querying remote compiler container for ${LANGUAGE_BOILERPLATES[language]?.label}...`]);
+    setConsoleLogs(prev => [...prev, `> Compilation pipeline dispatched for ${LANGUAGE_BOILERPLATES[language]?.label}...`]);
     setEvalReport(null);
 
     try {
@@ -222,37 +248,31 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
       if (resJson.success && resJson.data) {
         const report = resJson.data;
         setEvalReport(report);
-        
-        // Log individual compiler steps to terminal
-        const newLogs = [
-          `> Compiling solution.${LANGUAGE_BOILERPLATES[language]?.ext}...`
-        ];
+        const newLogs = [`> Compiling code.${LANGUAGE_BOILERPLATES[language]?.ext}...`];
 
         if (report.containsSyntaxIssues) {
-          newLogs.push("❌ Compilation Error Detected.");
+          newLogs.push("❌ Syntax assertion compilation error.");
         } else {
-          newLogs.push("✔ Compilation completed successfully.");
-          newLogs.push("> Deploying test cases suite assertions...");
+          newLogs.push("✔ Compiling process completed.");
+          newLogs.push("> Invoking local unit test cases...");
         }
 
         report.testCases.forEach(tc => {
           if (tc.passed) {
             newLogs.push(`✔ [PASSED] ${tc.name} (${tc.duration || '5ms'})`);
           } else {
-            newLogs.push(`❌ [FAILED] ${tc.name}:`);
-            newLogs.push(`   ${tc.error || 'Execution failed'}`);
+            newLogs.push(`❌ [FAILED] ${tc.name}: ${tc.error || 'Assertion failed'}`);
           }
         });
 
         newLogs.push(`---`);
-        newLogs.push(`EVALUATION COMPLETED. OVERALL GRADE: ${report.overallScore}/100`);
+        newLogs.push(`EVALUATION COMPLETED. SCORE: ${report.overallScore}/100`);
         setConsoleLogs(prev => [...prev, ...newLogs]);
       } else {
-        setConsoleLogs(prev => [...prev, `❌ Error: ${resJson.message || 'Remote compiler timeout.'}`]);
+        setConsoleLogs(prev => [...prev, `❌ Error: ${resJson.message || 'Compiler process failed.'}`]);
       }
-    } catch (err) {
-      console.error('Eval error:', err);
-      // Client offline simulator fallback
+    } catch {
+      // Simulate client offline fallback logic
       setTimeout(() => {
         const isCodeGood = code.includes('class') || code.includes('function') || code.includes('def ');
         const score = isCodeGood ? (explanationText ? 93 : 84) : 40;
@@ -271,9 +291,7 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
                 { name: 'Boundary Values Assertion Matrix', passed: true, duration: '14ms' }
               ]
             : [{ name: 'Syntax Check', passed: false, error: 'CompilationError: Missing class/method definition.' }],
-          recommendation: isCodeGood
-            ? 'Excellent algorithmic structuring and clean syntax overlay.'
-            : 'Integrate core class declarations and standard methods.'
+          recommendation: isCodeGood ? 'Outstanding modular framework structure.' : 'Calibrate syntax functions properly.'
         });
 
         setConsoleLogs(prev => [
@@ -303,259 +321,223 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
   };
 
   return (
-    <div className="max-w-7xl mx-auto py-2 space-y-6">
+    <div style={{ maxWidth: '1100px', margin: '0 auto', fontFamily: 'Inter, sans-serif', position: 'relative' }}>
       
-      {/* Page Header */}
-      <div className="glass-panel p-4 rounded-xl flex items-center justify-between border-indigo-950/40">
-        <div className="flex items-center space-x-3">
-          <Code2 className="w-5 h-5 text-indigo-400" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300 font-outfit">
-            Module 2: Technical Sandbox Algorithm Round
-          </span>
+      {/* Start Overlay */}
+      {!hasStarted && (
+        <div style={{ position: 'absolute', inset: -40, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.95)', borderRadius: '16px', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#111', border: '1px solid #2a2a2a', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <Code2 size={28} color="#fff" />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Coding Assessment Sandbox</h2>
+            <p style={{ fontSize: '15px', color: '#888', lineHeight: '1.6', margin: '0 0 32px' }}>
+              This technical assessment must be completed in fullscreen mode to ensure testing integrity. Do not exit fullscreen or switch tabs during the test.
+            </p>
+            <button
+              onClick={handleBeginTest}
+              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              Enter Fullscreen & Begin <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center space-x-4">
-          <span className="text-[10px] px-2.5 py-0.5 bg-purple-950/40 border border-purple-800/40 rounded-full font-bold text-purple-300 font-mono">
-            DIFFICULTY: {problem.difficulty}
-          </span>
-          <span className="text-[10px] text-slate-400 font-mono">
-            Time limit: {problem.timeLimit}
-          </span>
+      )}
+      
+      {/* Session header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 20px', background: '#111', border: '1px solid #222', borderRadius: '10px', marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Code2 size={16} color="#ccc" />
+          <span style={{ fontSize: '13px', fontWeight: '500', color: '#ccc' }}>CODING ASSESSMENT SANDBOX</span>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#888' }}>
+          <span>DIFFICULTY: {problem.difficulty}</span>
+          <span>•</span>
+          <span>LIMIT: {problem.timeLimit}</span>
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid lg:grid-cols-12 gap-6 min-h-[580px]">
+      {/* Primary Grid Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '5fr 7fr', gap: '20px' }}>
         
-        {/* Left Column: Problem description & speech controller */}
-        <div className="lg:col-span-5 flex flex-col gap-6 max-h-[620px]">
+        {/* Left Side: Requirements & Explain Logic verbally */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* Description Card */}
-          <div className="glass-panel p-6 rounded-2xl flex-1 border-indigo-950/40 overflow-y-auto max-h-[380px]">
-            <h2 className="text-md font-extrabold font-outfit text-white leading-snug mb-3">
-              {problem.title}
-            </h2>
-            <hr className="border-indigo-950/40 mb-4" />
-            
-            <div className="prose prose-invert prose-sm text-slate-300 leading-relaxed font-sans space-y-4 text-[12px]">
-              {problem.description.split('\n\n').map((para, i) => {
-                if (para.startsWith('###')) {
-                  return (
-                    <h3 key={i} className="text-xs font-bold text-indigo-400 font-outfit uppercase tracking-wide mt-4">
-                      {para.replace('### ', '')}
-                    </h3>
-                  );
+          {/* Question Requirements Panel */}
+          <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', flex: 1, maxHeight: '350px', overflowY: 'auto' }}>
+            <h2 style={{ fontSize: '17px', fontWeight: '600', color: '#fff', marginBottom: '12px', lineHeight: '1.4' }}>{problem.title}</h2>
+            <div style={{ fontSize: '13px', color: '#ddd', lineHeight: '1.6' }}>
+              {problem.description.split('\n\n').map((pStr, i) => {
+                if (pStr.startsWith('###')) {
+                  return <h3 key={i} style={{ fontSize: '12px', fontWeight: '600', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '16px', marginBottom: '8px' }}>{pStr.replace('### ', '')}</h3>;
                 }
-                if (para.startsWith('-')) {
+                if (pStr.startsWith('-')) {
                   return (
-                    <ul key={i} className="list-disc pl-5 space-y-1 bg-[#060910]/40 p-3 rounded-lg border border-indigo-950/30">
-                      {para.split('\n').map((item, j) => (
-                        <li key={j}>{item.replace('- ', '')}</li>
-                      ))}
+                    <ul key={i} style={{ paddingLeft: '18px', margin: '8px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      {pStr.split('\n').map((item, j) => <li key={j}>{item.replace('- ', '')}</li>)}
                     </ul>
                   );
                 }
-                return <p key={i}>{para}</p>;
+                return <p key={i} style={{ margin: '0 0 12px' }}>{pStr}</p>;
               })}
             </div>
           </div>
 
-          {/* Voice Explanation telemetry block */}
-          <div className="glass-panel p-6 rounded-2xl border-indigo-950/40 space-y-4">
-            <div className="flex justify-between items-center pb-2 border-b border-indigo-950/20">
-              <div className="flex items-center space-x-2">
-                <Mic className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-outfit">
-                  Voice Explanation Channel
-                </h3>
-              </div>
-              <span className="text-[8px] text-slate-500 font-mono font-bold">TELEMETRY</span>
+          {/* Voice explainer */}
+          <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#888', textTransform: 'uppercase' }}>Explain code walkthrough</span>
+              <span style={{ fontSize: '11px', color: '#555' }}>MIC FEED</span>
             </div>
-
-            <div className="w-full min-h-[70px] bg-slate-950/40 border border-indigo-950/40 rounded-xl p-3 text-[11px] leading-relaxed text-slate-400 font-mono">
-              {explanationText ? (
-                explanationText
-              ) : (
-                <p className="text-slate-600 italic">
-                  Click the record button below to verbally explain your code structures, temporal performance limits, or boundary strategies...
-                </p>
-              )}
+            
+            <div style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '14px', minHeight: '80px', fontSize: '12px', color: '#888', lineHeight: '1.6' }}>
+              {explanationText || <span style={{ fontStyle: 'italic', color: '#444' }}>Press button to verbally describe logic execution algorithms...</span>}
             </div>
 
             <button
               onClick={toggleRecording}
-              className={`w-full py-2.5 rounded-xl font-bold font-outfit text-xs tracking-wider uppercase transition-all duration-300 flex items-center justify-center space-x-2 ${
-                isRecording 
-                  ? 'bg-red-600 hover:bg-red-700 text-white shadow shadow-red-950'
-                  : 'bg-indigo-950/40 border border-indigo-500/30 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-950/60'
-              }`}
+              style={{
+                width: '100%', padding: '10px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: '600', cursor: 'pointer',
+                background: isRecording ? '#ef4444' : '#fff',
+                color: isRecording ? '#fff' : '#000',
+                transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+              }}
             >
-              {isRecording ? (
-                <>
-                  <MicOff className="w-4 h-4 animate-pulse" />
-                  <span>Stop Capture Walkthrough</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="w-4 h-4 animate-pulse" />
-                  <span>Explain Code Logic verbally</span>
-                </>
-              )}
+              {isRecording ? <><MicOff size={14} /> Stop Capturing</> : <><Mic size={14} /> Record Speech</>}
             </button>
           </div>
 
         </div>
 
-        {/* Right Column: Code Editor, Language triggers, Terminal, Diagnostics */}
-        <div className="lg:col-span-7 flex flex-col gap-6 max-h-[620px]">
+        {/* Right Side: Monaco IDE editor and Diagnostics */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           
-          {/* Code IDE Simulator */}
-          <div className="flex-1 glass-panel rounded-2xl overflow-hidden flex flex-col border-indigo-950/40 min-h-[300px]">
-            {/* Tab header containing language triggers */}
-            <div className="bg-[#090d16]/70 border-b border-indigo-950/40 px-4 py-2 flex items-center justify-between shrink-0">
-              <div className="flex items-center space-x-2">
-                <FileCode className="w-4 h-4 text-indigo-400" />
-                <span className="text-[11px] font-bold text-slate-300 font-mono">
-                  solution.{LANGUAGE_BOILERPLATES[language]?.ext}
-                </span>
+          {/* Editor block container */}
+          <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '360px' }}>
+            <div style={{ background: '#0d0d0d', borderBottom: '1px solid #1e1e1e', padding: '8px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <FileCode size={14} color="#888" />
+                <span style={{ fontSize: '12px', color: '#aaa', fontFamily: 'monospace' }}>solution.{LANGUAGE_BOILERPLATES[language]?.ext}</span>
               </div>
-              
-              {/* C++, Java, Python segmented trigger buttons */}
-              <div className="flex items-center space-x-1.5 bg-[#060910] border border-indigo-950/60 rounded-lg p-0.5">
-                {Object.keys(LANGUAGE_BOILERPLATES).map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => handleLanguageChange(lang)}
-                    className={`px-2.5 py-1 text-[10px] font-bold font-mono rounded transition-colors ${
-                      language === lang
-                        ? 'bg-indigo-950/60 border border-indigo-500/30 text-cyan-400 shadow shadow-indigo-950'
-                        : 'text-slate-500 hover:text-slate-300'
-                    }`}
-                  >
+
+              {/* Language toggler */}
+              <div style={{ display: 'flex', background: '#111', border: '1px solid #222', borderRadius: '6px', padding: '2px' }}>
+                {Object.keys(LANGUAGE_BOILERPLATES).map(lang => (
+                  <button key={lang} onClick={() => handleLanguageChange(lang)} style={{ border: 'none', borderRadius: '4px', padding: '4px 8px', fontSize: '10px', fontFamily: 'monospace', cursor: 'pointer', background: language === lang ? '#1e1e1e' : 'transparent', color: language === lang ? '#fff' : '#555', transition: 'all 0.15s' }}>
                     {LANGUAGE_BOILERPLATES[lang].label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Monaco Editor Integration */}
-            <div className="flex-1 w-full relative">
+            {/* Monaco wrapper */}
+            <div style={{ flex: 1, minHeight: 0 }}>
               <Editor
                 height="100%"
                 language={language}
                 theme="vs-dark"
                 value={code}
-                onChange={(value) => setCode(value || '')}
+                onChange={v => setCode(v || '')}
                 options={{
                   minimap: { enabled: false },
-                  fontSize: 14,
+                  fontSize: 13,
                   fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
-                  lineHeight: 24,
-                  padding: { top: 16, bottom: 16 },
+                  lineHeight: 20,
+                  padding: { top: 12, bottom: 12 },
                   scrollBeyondLastLine: false,
-                  smoothScrolling: true,
                   cursorBlinking: "smooth",
-                  cursorSmoothCaretAnimation: "on",
-                  formatOnPaste: true,
                 }}
-                loading={<div className="h-full w-full flex items-center justify-center text-indigo-400 font-mono text-xs">Loading Editor Environment...</div>}
+                loading={<div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#555', fontSize: '12px' }}>Initializing Editor…</div>}
               />
             </div>
           </div>
 
-          {/* Diagnostic & Compiler Panel */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 shrink-0">
-            {/* Terminal Outputs */}
-            <div className="h-44 glass-panel rounded-2xl flex flex-col overflow-hidden border-indigo-950/40">
-              <div className="bg-[#090d16]/70 border-b border-indigo-950/40 px-4 py-1.5 flex items-center justify-between shrink-0">
-                <div className="flex items-center space-x-2">
-                  <Terminal className="w-3.5 h-3.5 text-cyan-400" />
-                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono">Execution Logs</span>
-                </div>
-                {isRunning && <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>}
+          {/* Compiler Terminal Outputs & Diagnosis */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            
+            {/* Terminal output */}
+            <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', height: '130px', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+              <div style={{ background: '#0d0d0d', borderBottom: '1px solid #1e1e1e', padding: '6px 12px', fontSize: '11px', fontWeight: '600', color: '#666', letterSpacing: '0.05em' }}>
+                COMPILER TERMINAL LOGS
               </div>
-              
-              <div className="flex-1 bg-[#060910]/80 p-4 overflow-y-auto font-mono text-[10px] text-slate-400 space-y-1">
+              <div style={{ flex: 1, padding: '10px', overflowY: 'auto', background: '#0d0d0d', fontFamily: 'monospace', fontSize: '10px', color: '#888', display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {consoleLogs.map((log, idx) => (
-                  <div key={idx} className={log.startsWith('✔') ? 'text-emerald-400 font-semibold' : log.startsWith('❌') ? 'text-red-400 font-semibold' : log.startsWith('EVALUATION') ? 'text-cyan-400 font-bold' : ''}>
-                    {log}
-                  </div>
+                  <div key={idx} style={{ color: log.startsWith('✔') ? '#4ade80' : log.startsWith('❌') ? '#ef4444' : '#888' }}>{log}</div>
                 ))}
               </div>
             </div>
 
-            {/* Score diagnostics report */}
-            <div className="h-44 glass-panel rounded-2xl flex flex-col overflow-hidden border-indigo-950/40 p-4 justify-between bg-slate-950/20">
+            {/* AI Diagnostics score */}
+            <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', height: '130px', padding: '12px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               {evalReport ? (
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center pb-2 border-b border-indigo-950/20">
-                    <div className="flex items-center space-x-1.5">
-                      <Award className="w-4 h-4 text-emerald-400" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300 font-outfit">Evaluation Metrics</span>
-                    </div>
-                    <span className="text-[9px] px-2 py-0.5 bg-emerald-950/40 border border-emerald-500/25 rounded-md font-mono text-emerald-400 font-bold">
-                      Grade: {evalReport.overallScore}%
-                    </span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #1e1e1e', paddingBottom: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: '#888' }}>DIAGNOSTICS REPORT</span>
+                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#4ade80' }}>Grade: {evalReport.overallScore}%</span>
                   </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center text-slate-300">
-                    <div className="bg-[#060910]/50 p-2 rounded-lg border border-indigo-950/40">
-                      <span className="text-[8px] text-slate-500 block uppercase font-mono">Syntax</span>
-                      <span className="text-xs font-bold text-cyan-400 font-mono">{evalReport.metrics.syntaxScore}</span>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', textAlign: 'center' }}>
+                    <div style={{ background: '#0d0d0d', padding: '4px', border: '1px solid #222', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '8px', color: '#444' }}>SYNTAX</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#fff' }}>{evalReport.metrics.syntaxScore}</div>
                     </div>
-                    <div className="bg-[#060910]/50 p-2 rounded-lg border border-indigo-950/40">
-                      <span className="text-[8px] text-slate-500 block uppercase font-mono">Optims</span>
-                      <span className="text-xs font-bold text-emerald-400 font-mono">{evalReport.metrics.optimizationScore}</span>
+                    <div style={{ background: '#0d0d0d', padding: '4px', border: '1px solid #222', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '8px', color: '#444' }}>OPTIM</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#fff' }}>{evalReport.metrics.optimizationScore}</div>
                     </div>
-                    <div className="bg-[#060910]/50 p-2 rounded-lg border border-indigo-950/40">
-                      <span className="text-[8px] text-slate-500 block uppercase font-mono">Voice</span>
-                      <span className="text-xs font-bold text-amber-400 font-mono">{evalReport.metrics.explanationScore || 0}</span>
+                    <div style={{ background: '#0d0d0d', padding: '4px', border: '1px solid #222', borderRadius: '4px' }}>
+                      <div style={{ fontSize: '8px', color: '#444' }}>VOICE</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#fff' }}>{evalReport.metrics.explanationScore || 0}</div>
                     </div>
                   </div>
-
-                  <p className="text-[9.5px] leading-normal text-slate-400 italic line-clamp-2">
+                  <div style={{ fontSize: '10px', color: '#555', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {evalReport.recommendation}
-                  </p>
+                  </div>
                 </div>
               ) : (
-                <div className="my-auto text-center space-y-1">
-                  <AlertCircle className="w-5 h-5 text-indigo-500/35 mx-auto" />
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono">Awaiting execution tests...</p>
+                <div style={{ margin: 'auto', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                  <AlertCircle size={18} color="#333" />
+                  <span style={{ fontSize: '10px', color: '#444' }}>Awaiting compilation tests…</span>
                 </div>
               )}
             </div>
+
           </div>
 
-          {/* Execution Controls panel */}
-          <div className="bg-[#090d16]/70 border border-indigo-950/40 rounded-xl p-3 flex items-center justify-between shrink-0">
+          {/* Sandbox controls footer */}
+          <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '10px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <button
               onClick={() => setCode(LANGUAGE_BOILERPLATES[language]?.[selectedRole] || '')}
-              className="p-2 border border-indigo-950/60 text-slate-500 hover:text-slate-300 rounded-lg hover:bg-slate-900/40 transition-colors"
-              title="Reset code template"
+              style={{ padding: '8px', background: 'transparent', border: '1px solid #222', borderRadius: '6px', cursor: 'pointer', color: '#555' }}
+              title="Reset boilerplate template"
             >
-              <RefreshCw className="w-3.5 h-3.5" />
+              <RefreshCw size={13} />
             </button>
 
-            <div className="flex items-center space-x-3">
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={executeCode}
                 disabled={isRunning}
-                className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 hover:text-white border border-indigo-900/30 font-bold rounded-lg transition-colors flex items-center space-x-1.5 font-outfit text-xs"
+                style={{
+                  padding: '8px 16px', border: '1px solid #222', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: isRunning ? 'not-allowed' : 'pointer',
+                  background: isRunning ? '#1a1a1a' : 'transparent',
+                  color: isRunning ? '#444' : '#fff',
+                }}
               >
-                <Play className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Run execution</span>
+                Run execution
               </button>
 
               <button
                 onClick={handleFinishInterview}
                 disabled={!evalReport || isRunning}
-                className={`px-5 py-2 rounded-lg font-bold font-outfit text-xs flex items-center space-x-1.5 transition-all ${
-                  evalReport && !isRunning
-                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow shadow-emerald-950'
-                    : 'bg-slate-950 border border-indigo-950/40 text-slate-600 cursor-not-allowed'
-                }`}
+                style={{
+                  padding: '8px 20px', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: !evalReport || isRunning ? 'not-allowed' : 'pointer',
+                  background: !evalReport || isRunning ? '#1a1a1a' : '#fff',
+                  color: !evalReport || isRunning ? '#444' : '#000',
+                  transition: 'all 0.15s', display: 'flex', alignItems: 'center', gap: '6px',
+                }}
               >
-                <span>Submit & Complete</span>
-                <ChevronRight className="w-3.5 h-3.5" />
+                Submit & Complete <ChevronRight size={13} />
               </button>
             </div>
           </div>
@@ -563,6 +545,30 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
         </div>
 
       </div>
+
+      {/* Cheat Warning Overlay */}
+      {isCheatWarningVisible && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(10,10,10,0.95)', backdropFilter: 'blur(10px)' }}>
+          <div style={{ background: '#111', border: '1px solid #ff4444', borderRadius: '16px', padding: '48px', maxWidth: '520px', width: '100%', textAlign: 'center', boxShadow: '0 0 40px rgba(255, 68, 68, 0.1)' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#270e0f', border: '1px solid #ff4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+              <AlertCircle size={28} color="#ff4444" />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '600', color: '#fff', margin: '0 0 12px' }}>Assessment Integrity Warning</h2>
+            <p style={{ fontSize: '15px', color: '#aaa', lineHeight: '1.6', margin: '0 0 32px' }}>
+              You have exited fullscreen mode or switched tabs during the coding assessment. This violation has been logged and will negatively impact your technical score.
+            </p>
+            <button
+              onClick={async () => {
+                try { await document.documentElement.requestFullscreen(); } catch (err) {}
+                setIsCheatWarningVisible(false);
+              }}
+              style={{ padding: '12px 32px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '15px', fontWeight: '600', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '8px' }}
+            >
+              Resume Coding Test <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

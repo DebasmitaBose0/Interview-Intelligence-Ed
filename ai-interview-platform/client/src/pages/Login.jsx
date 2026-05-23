@@ -1,199 +1,90 @@
 import React, { useState } from 'react';
-import { Mail, Lock, ShieldCheck, ArrowRight, Eye, EyeOff, Loader2, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
+
+const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
 export default function Login({ setToken, setUser, setCurrentTab }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  // Validation and alerts state
   const [errors, setErrors] = useState({});
   const [toast, setToast] = useState(null);
 
-  const triggerToast = (msg, type = 'success') => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 4000);
-  };
+  const showToast = (msg, type = 'ok') => { setToast({ msg, type }); setTimeout(() => setToast(null), 4000); };
 
   const validate = () => {
-    const errs = {};
-    if (!email) {
-      errs.email = 'Email address is required';
-    } else if (!/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email)) {
-      errs.email = 'Please specify a valid email address';
-    }
-    if (!password) {
-      errs.password = 'Password is required';
-    } else if (password.length < 6) {
-      errs.password = 'Password must be at least 6 characters long';
-    }
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
+    const e = {};
+    if (!email) e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(email)) e.email = 'Enter a valid email';
+    if (!password) e.password = 'Password is required';
+    else if (password.length < 6) e.password = 'At least 6 characters';
+    setErrors(e);
+    return !Object.keys(e).length;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validate()) {
-      triggerToast('Please correct validation errors', 'error');
-      return;
-    }
-
+    if (!validate()) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        triggerToast('Authentication verified! Redirecting...', 'success');
-        
-        // Save session credentials
-        setTimeout(() => {
-          localStorage.setItem('camsense_token', data.data.token);
-          setToken(data.data.token);
-          setUser(data.data);
-          setCurrentTab('home');
-        }, 1500);
-      } else {
-        triggerToast(data.message || 'Invalid email or password credentials', 'error');
-      }
-    } catch (err) {
-      console.error('Authentication fetch failure:', err);
-      triggerToast('Connection to authentication server failed. Please check backend status.', 'error');
-    } finally {
-      setTimeout(() => setLoading(false), 1500);
-    }
+      const res = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const d = await res.json();
+      if (d.success) {
+        showToast('Signed in successfully!');
+        setTimeout(() => { localStorage.setItem('camsense_token', d.data.token); setToken(d.data.token); setUser(d.data); setCurrentTab('home'); }, 1200);
+      } else { showToast(d.message || 'Invalid credentials', 'err'); }
+    } catch { showToast('Connection failed. Check server.', 'err'); }
+    finally { setTimeout(() => setLoading(false), 1200); }
   };
 
   return (
-    <div className="max-w-md mx-auto my-12 relative">
-      
-      {/* Toast Notification Container */}
+    <div style={{ width: '100%', maxWidth: '400px', padding: '0 16px', fontFamily: 'Inter, sans-serif' }}>
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 flex items-center space-x-2.5 px-4 py-3 rounded-xl border shadow-xl transition-all duration-300 transform translate-y-0 animate-bounce ${
-          toast.type === 'success' 
-            ? 'bg-emerald-950/90 border-emerald-500/50 text-emerald-300' 
-            : 'bg-rose-950/90 border-rose-500/50 text-rose-300'
-        }`}>
-          <div className={`w-2 h-2 rounded-full ${toast.type === 'success' ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`}></div>
-          <span className="text-[12.5px] font-bold font-sans">{toast.msg}</span>
+        <div style={{ position: 'fixed', top: '20px', right: '20px', zIndex: 100, background: toast.type === 'ok' ? '#14532d' : '#7f1d1d', border: `1px solid ${toast.type === 'ok' ? '#22c55e' : '#ef4444'}`, color: '#fff', padding: '10px 16px', borderRadius: '8px', fontSize: '13px' }}>
+          {toast.msg}
         </div>
       )}
 
-      {/* Glow Effects */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-600 to-cyan-500 rounded-3xl blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '600', color: '#fff', margin: '0 0 4px' }}>Sign in</h2>
+        <p style={{ fontSize: '13px', color: '#666', margin: '0 0 24px' }}>Enter your credentials to access the platform.</p>
 
-      <div className="relative glass-panel p-8 rounded-3xl border-indigo-950/40 space-y-6">
-        
-        {/* Banner header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex p-3 rounded-2xl bg-indigo-950/60 border border-indigo-900/40 mb-2">
-            <ShieldCheck className="w-6 h-6 text-indigo-400" />
-          </div>
-          <h2 className="text-2xl font-extrabold font-outfit text-white tracking-tight flex items-center justify-center space-x-1.5">
-            <span>Access Assessment Center</span>
-          </h2>
-          <p className="text-xs text-slate-400">
-            Sign in to start your camera-monitored AI interview challenge.
-          </p>
-        </div>
-
-        {/* Input form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          
-          {/* Email input field */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
-              <input
-                type="email"
-                placeholder="candidate@camsense.ai"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  if (errors.email) setErrors(prev => ({ ...prev, email: '' }));
-                }}
-                className={`w-full bg-slate-950/80 border rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none transition-all duration-300 ${
-                  errors.email 
-                    ? 'border-rose-500/50 focus:border-rose-500 text-rose-200' 
-                    : 'border-indigo-950/80 focus:border-indigo-500 text-white'
-                }`}
-              />
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Email address</label>
+            <div style={{ position: 'relative' }}>
+              <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
+              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); setErrors(p => ({ ...p, email: '' })); }} style={inp(errors.email)} />
             </div>
-            {errors.email && <span className="text-[10px] text-rose-400 font-mono font-semibold">{errors.email}</span>}
+            {errors.email && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.email}</p>}
           </div>
 
-          {/* Password field */}
-          <div className="space-y-1">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Secret Access Key</label>
-            <div className="relative">
-              <Lock className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-500" />
-              <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => {
-                  setPassword(e.target.value);
-                  if (errors.password) setErrors(prev => ({ ...prev, password: '' }));
-                }}
-                className={`w-full bg-slate-950/80 border rounded-xl pl-10 pr-11 py-3 text-sm focus:outline-none transition-all duration-300 ${
-                  errors.password 
-                    ? 'border-rose-500/50 focus:border-rose-500 text-rose-200' 
-                    : 'border-indigo-950/80 focus:border-indigo-500 text-white'
-                }`}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-3.5 p-0.5 text-slate-500 hover:text-slate-300 transition-colors"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          <div>
+            <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Password</label>
+            <div style={{ position: 'relative' }}>
+              <Lock size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
+              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); setErrors(p => ({ ...p, password: '' })); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
+              <button type="button" onClick={() => setShow(!show)} style={{ position: 'absolute', right: '10px', top: '9px', background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px' }}>
+                {show ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            {errors.password && <span className="text-[10px] text-rose-400 font-mono font-semibold">{errors.password}</span>}
+            {errors.password && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.password}</p>}
           </div>
 
-          {/* Submit btn */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full group py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-950/60 disabled:text-indigo-400 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-all duration-300 flex items-center justify-center space-x-2 mt-6 shadow shadow-indigo-600/10 hover:shadow-indigo-500/20"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-400" />
-                <span>Decrypting Session Tokens...</span>
-              </>
-            ) : (
-              <>
-                <span>Authenticate Credentials</span>
-                <ArrowRight className="w-4 h-4 text-indigo-200 group-hover:translate-x-1 transition-transform" />
-              </>
-            )}
+          <button type="submit" disabled={loading} style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s' }}>
+            {loading ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Signing in…</> : <>Sign in <ArrowRight size={15} /></>}
           </button>
         </form>
 
-        {/* Footer selector switch */}
-        <div className="pt-4 border-t border-indigo-950/30 text-center">
-          <p className="text-xs text-slate-400">
-            First time in Camsense Chamber?{' '}
-            <button
-              onClick={() => setCurrentTab('signup')}
-              className="text-indigo-400 hover:text-indigo-300 font-bold hover:underline transition-all"
-            >
-              Sign Up Access
-            </button>
-          </p>
-        </div>
-
+        <p style={{ textAlign: 'center', fontSize: '13px', color: '#555', marginTop: '20px', paddingTop: '16px', borderTop: '1px solid #1e1e1e' }}>
+          New here?{' '}
+          <button onClick={() => setCurrentTab('signup')} style={{ background: 'none', border: 'none', color: '#aaa', fontWeight: '500', cursor: 'pointer', textDecoration: 'underline', fontSize: '13px' }}>
+            Create an account
+          </button>
+        </p>
       </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
