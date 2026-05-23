@@ -1,108 +1,111 @@
 const Resume = require('../models/Resume');
-const { parseResume } = require('../utils/resumeParser');
-const { analyzeSkillsWithGemini } = require('../services/geminiService');
+const { extractTextFromBuffer } = require('../utils/pdfParser');
+const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
+const mammoth = require('mammoth');
 const path = require('path');
 const fs = require('fs');
 
 /**
- * Handle candidate resume file upload and heuristic parsing.
+ * Resume Upload Flow (from diagram):
+ * File Upload → Extract Raw Text → Gemini AI Parsing → Skill Extraction → MongoDB Save
  * POST /api/resume/upload
- * Secured by protect middleware
  */
 exports.uploadResume = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please provide a PDF or DOCX resume file to upload'
-      });
+      return res.status(400).json({ success: false, message: 'Please provide a PDF or DOCX resume file.' });
     }
 
     const { originalname, buffer, mimetype } = req.file;
+    console.log(`[Resume Upload] Received: ${originalname} (${mimetype})`);
 
-    // Perform text parsing from buffer
-    console.log(`Analyzing file: ${originalname} (${mimetype})`);
-    const parsedData = await parseResume(buffer, mimetype);
-
-    // Secure local path storage simulation 
-    const uploadDir = path.join(__dirname, '../../uploads');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Step 1: Extract raw text from PDF or DOCX
+    let rawText = '';
+    if (mimetype === 'application/pdf' || originalname.endsWith('.pdf')) {
+      const pdfParse = require('pdf-parse');
+      const pdfData = await pdfParse(buffer);
+      rawText = pdfData.text;
+    } else if (
+      mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      originalname.endsWith('.docx')
+    ) {
+      const result = await mammoth.extractRawText({ buffer });
+      rawText = result.value;
+    } else {
+      return res.status(400).json({ success: false, message: 'Only PDF and DOCX files are supported.' });
     }
-    
-    // Save file locally to store it temporarily/persistently
+
+    if (!rawText || rawText.trim().length < 50) {
+      return res.status(400).json({ success: false, message: 'Could not extract readable text from this file. Please try another file.' });
+    }
+
+    console.log(`[Resume Upload] Extracted ${rawText.length} characters. Sending to Gemini...`);
+
+    // Step 2: Gemini AI — extract structured profile (replaces all NLP/regex)
+    const geminiData = await extractResumeData(rawText);
+
+    // Step 3: Save file to disk
+    const uploadDir = path.join(__dirname, '../../uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     const tempFileName = `${Date.now()}_${originalname.replace(/\s+/g, '_')}`;
     const tempFilePath = path.join(uploadDir, tempFileName);
     fs.writeFileSync(tempFilePath, buffer);
 
-    // Save parsed details in MongoDB
-    // Check if user already has an uploaded resume, if so update it, otherwise create new
+    // Step 4: Upsert to MongoDB
     let resume = await Resume.findOne({ user: req.user._id });
-    
+    const resumeFields = {
+      fileName: originalname,
+      filePath: tempFilePath,
+      extractedText: rawText,
+      skills: geminiData.skills || [],
+      education: geminiData.education || [],
+      experience: geminiData.experience || [],
+      projects: geminiData.projects || [],
+      summary: geminiData.summary || ''
+    };
+
     if (resume) {
-      // Remove old file if it exists
-      if (fs.existsSync(resume.filePath)) {
+      if (resume.filePath && fs.existsSync(resume.filePath)) {
         try { fs.unlinkSync(resume.filePath); } catch (e) {}
       }
-
-      resume.fileName = originalname;
-      resume.filePath = tempFilePath;
-      resume.extractedText = parsedData.extractedText;
-      resume.skills = parsedData.skills;
-      resume.education = parsedData.education;
-      resume.experience = parsedData.experience;
-      resume.projects = parsedData.projects;
+      Object.assign(resume, resumeFields);
       await resume.save();
     } else {
-      resume = await Resume.create({
-        user: req.user._id,
-        fileName: originalname,
-        filePath: tempFilePath,
-        extractedText: parsedData.extractedText,
-        skills: parsedData.skills,
-        education: parsedData.education,
-        experience: parsedData.experience,
-        projects: parsedData.projects
-      });
+      resume = await Resume.create({ user: req.user._id, ...resumeFields });
     }
+
+    console.log(`[Resume Upload] Saved. Skills extracted: ${resume.skills.length}`);
 
     res.status(200).json({
       success: true,
-      message: 'Resume parsed and stored in database successfully',
+      message: `Resume analyzed by Gemini AI. Extracted ${resume.skills.length} skills.`,
       data: {
         id: resume._id,
         fileName: resume.fileName,
         skills: resume.skills,
         education: resume.education,
         experience: resume.experience,
-        projects: resume.projects
+        projects: resume.projects,
+        summary: resume.summary
       }
     });
 
   } catch (error) {
-    console.error('Resume parsing controller failure:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Parsing failure: ' + error.message
-    });
+    console.error('[Resume Upload] Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 /**
- * Fetch candidate's active parsed resume profile
+ * Fetch candidate's stored resume profile
  * GET /api/resume/me
- * Secured by protect middleware
  */
 exports.getResume = async (req, res) => {
   try {
     const resume = await Resume.findOne({ user: req.user._id });
     if (!resume) {
-      return res.status(404).json({
-        success: false,
-        message: 'No resume profile found for current user'
-      });
+      return res.status(404).json({ success: false, message: 'No resume found. Please upload your resume first.' });
     }
-
     res.status(200).json({
       success: true,
       data: {
@@ -111,58 +114,44 @@ exports.getResume = async (req, res) => {
         skills: resume.skills,
         education: resume.education,
         experience: resume.experience,
-        projects: resume.projects
+        projects: resume.projects,
+        summary: resume.summary || ''
       }
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve resume: ' + error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
 /**
- * Correlate and analyze pasted Job Description against stored resume skills.
+ * JD Matching Flow (from diagram):
+ * Job Description Input → Gemini AI → Skill Extraction & Matching → Results
  * POST /api/resume/analyze-jd
- * Secured by protect middleware
  */
 exports.analyzeJobDescription = async (req, res) => {
   try {
     const { jobDescription } = req.body;
-    if (!jobDescription) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter a target Job Description to initiate matching correlation'
-      });
+    if (!jobDescription || jobDescription.trim().length < 20) {
+      return res.status(400).json({ success: false, message: 'Please paste a complete job description (at least 20 characters).' });
     }
 
-    // Fetch candidate's active parsed resume profile
     const resume = await Resume.findOne({ user: req.user._id });
     if (!resume) {
-      return res.status(404).json({
-        success: false,
-        message: 'Please upload a resume file before running job description analysis'
-      });
+      return res.status(404).json({ success: false, message: 'Please upload your resume first before running job description analysis.' });
     }
 
-    // Run high-fidelity Gemini AI analysis comparing parsed resume text against JD
-    const analysisResult = await analyzeSkillsWithGemini(
-      resume.extractedText || resume.skills.join(', '), 
-      jobDescription
-    );
+    // Use full extracted text for best Gemini accuracy
+    const resumeContent = resume.extractedText || resume.skills.join(', ');
+    const analysisResult = await analyzeSkillsWithGemini(resumeContent, jobDescription);
 
     res.status(200).json({
       success: true,
-      message: 'Job description analyzed successfully against resume credentials using Gemini AI',
+      message: 'Job description analyzed with Gemini AI',
       data: analysisResult
     });
 
   } catch (error) {
-    console.error('Job description analysis failed:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Analysis failed: ' + error.message
-    });
+    console.error('[JD Analysis] Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -505,15 +505,16 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
             <div className="glass-panel p-6 rounded-2xl space-y-4 animate-fade-in">
               <div className="flex justify-between items-center border-b border-indigo-950/40 pb-3">
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 font-outfit">
-                  Extracted Profile Preview
+                  AI Profile Preview
                 </h3>
-                <span className="text-[9px] text-cyan-400 font-bold font-mono">NLP Parser V1.2</span>
+                <span className="text-[9px] text-cyan-400 font-bold font-mono flex items-center gap-1">✦ Gemini AI</span>
               </div>
 
               {/* Profile Preview Tab Bar */}
               <div className="flex space-x-1 border-b border-indigo-950/20 pb-1">
                 {[
                   { id: 'skills', label: 'Tech Stack', icon: Code },
+                  { id: 'summary', label: 'Summary', icon: Sparkles },
                   { id: 'education', label: 'Education', icon: GraduationCap },
                   { id: 'experience', label: 'Experience', icon: Briefcase },
                   { id: 'projects', label: 'Projects', icon: FileText }
@@ -541,7 +542,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
               <div className="min-h-[140px] max-h-[220px] overflow-y-auto pr-1">
                 {activePreviewTab === 'skills' && (
                   <div className="space-y-2">
-                    <span className="text-[10px] text-slate-400 font-medium font-sans">Extracted Skill Taxonomy Tags:</span>
+                    <span className="text-[10px] text-slate-400 font-medium font-sans">Skills extracted by Gemini AI ({parsedProfile.skills?.length || 0} found):</span>
                     <div className="flex flex-wrap gap-1.5">
                       {parsedProfile.skills && parsedProfile.skills.length > 0 ? (
                         parsedProfile.skills.map(skill => (
@@ -550,9 +551,22 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                           </span>
                         ))
                       ) : (
-                        <span className="text-[10px] text-slate-600 italic">No skills extracted. Update resume file.</span>
+                        <span className="text-[10px] text-slate-600 italic">No skills extracted. Try re-uploading your resume.</span>
                       )}
                     </div>
+                  </div>
+                )}
+
+                {activePreviewTab === 'summary' && (
+                  <div className="space-y-2">
+                    <span className="text-[10px] text-cyan-400 font-bold uppercase tracking-wider flex items-center gap-1">✦ Gemini Professional Summary</span>
+                    {parsedProfile.summary ? (
+                      <p className="text-[11.5px] text-slate-300 leading-relaxed font-sans bg-indigo-950/20 p-3 rounded-xl border border-indigo-950/40">
+                        {parsedProfile.summary}
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-600 italic">No summary generated yet. Re-upload your resume to get an AI summary.</p>
+                    )}
                   </div>
                 )}
 
@@ -703,7 +717,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
             onClick={handleStartInterview}
             className="w-full group py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold rounded-2xl shadow-lg shadow-indigo-600/10 hover:shadow-indigo-500/35 transition-all duration-300 flex items-center justify-center space-x-2 relative overflow-hidden"
           >
-            <span className="font-outfit text-xs tracking-widest uppercase">Engage System Loop</span>
+            <span className="font-outfit text-xs tracking-widest uppercase">Start Interview</span>
             <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
           </button>
 

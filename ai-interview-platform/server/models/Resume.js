@@ -34,6 +34,10 @@ const ResumeSchema = new mongoose.Schema({
     type: [String],
     default: [],
   },
+  summary: {
+    type: String,
+    default: '',
+  },
   createdAt: {
     type: Date,
     default: Date.now,
