@@ -1,31 +1,19 @@
-const mongoose = require('mongoose');
+const admin = require('firebase-admin');
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables
+// Load environment variables before anything else
 dotenv.config({ path: path.join(__dirname, '../.env') });
+if (!admin.apps.length) {
+  admin.initializeApp({
+    projectId: 'aiinterview-a3d81'
+  });
+  console.log('✔ Firebase Admin initialized statelessly.');
+}
 
 const app = require('./app');
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || process.env.DATABASE_URL || 'mongodb://localhost:27017/ai_interview_platform';
 
-// Connect to MongoDB using Mongoose
-console.log('Connecting to database...');
-mongoose
-  .connect(MONGO_URI)
-  .then(() => {
-    console.log('✔ MongoDB Connected Successfully.');
-    // Start active HTTP listening engine
-    app.listen(PORT, () => {
-      console.log(`✔ API server listening gracefully on port ${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('❌ Database Connection Error:', err.message);
-    console.log('⚠️ Running in fallback mock database schema mode for local verification...');
-    
-    // Graceful startup fallback for developer agility
-    app.listen(PORT, () => {
-      console.log(`✔ API server listening gracefully on port ${PORT} (Offline Schema Fallback)`);
-    });
-  });
+app.listen(PORT, () => {
+  console.log(`✔ Stateless API server listening gracefully on port ${PORT}`);
+});

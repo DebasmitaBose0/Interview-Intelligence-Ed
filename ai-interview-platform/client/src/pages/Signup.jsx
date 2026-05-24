@@ -35,16 +35,15 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
 
-      const res = await fetch('/api/auth/firebase', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email: fbUser.email, name: name || fbUser.displayName || email.split('@')[0], uid: fbUser.uid }) 
-      });
-      const d = await res.json();
-      if (d.success) {
-        showToast('Account created!');
-        setTimeout(() => { localStorage.setItem('camsense_token', d.data.token); setToken(d.data.token); setUser(d.data); setCurrentTab('home'); }, 1200);
-      } else { showToast(d.message || 'Could not create account on server', 'err'); }
+      const token = await fbUser.getIdToken();
+      
+      showToast('Account created!');
+      setTimeout(() => { 
+        localStorage.setItem('camsense_token', token); 
+        setToken(token); 
+        setUser({ uid: fbUser.uid, name: name || fbUser.displayName || email.split('@')[0], email: fbUser.email }); 
+        setCurrentTab('home'); 
+      }, 1200);
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         showToast('Email already in use', 'err');
@@ -61,17 +60,15 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
-      
-      const res = await fetch('/api/auth/firebase', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email: fbUser.email, name: fbUser.displayName, uid: fbUser.uid }) 
-      });
-      const d = await res.json();
-      if (d.success) {
-        showToast('Account created with Google!');
-        setTimeout(() => { localStorage.setItem('camsense_token', d.data.token); setToken(d.data.token); setUser(d.data); setCurrentTab('home'); }, 1200);
-      } else { showToast(d.message || 'Server registration failed', 'err'); }
+      const token = await fbUser.getIdToken();
+
+      showToast('Account created with Google!');
+      setTimeout(() => { 
+        localStorage.setItem('camsense_token', token); 
+        setToken(token); 
+        setUser({ uid: fbUser.uid, name: fbUser.displayName, email: fbUser.email }); 
+        setCurrentTab('home'); 
+      }, 1200);
     } catch (err) {
       showToast('Google sign-up was cancelled or failed.', 'err');
     }

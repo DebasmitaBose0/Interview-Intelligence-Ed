@@ -21,7 +21,13 @@ export default function Result({ globalState, setGlobalState, setCurrentTab }) {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer demo_token_active'
         },
-        body: JSON.stringify({ interviewId: interviewId === 'demo_session_active' ? undefined : interviewId })
+        body: JSON.stringify({ 
+          interviewId: interviewId === 'demo_session_active' ? undefined : interviewId,
+          role: selectedRole,
+          experience: experience,
+          questions: globalState.interviewQuestions || [],
+          answers: globalState.userAnswers || []
+        })
       });
       const resJson = await response.json();
       if (resJson.success && resJson.data) {

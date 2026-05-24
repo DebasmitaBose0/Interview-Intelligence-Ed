@@ -1,5 +1,3 @@
-const Report = require('../models/Report');
-const Interview = require('../models/Interview');
 const { synthesizeInterviewReport } = require('../services/geminiService');
 
 // @desc    Synthesize and retrieve detailed performance report using Gemini AI
@@ -7,39 +5,27 @@ const { synthesizeInterviewReport } = require('../services/geminiService');
 // @access  Private
 exports.synthesizeReport = async (req, res) => {
   try {
-    const { interviewId } = req.body;
-    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const { role, experience, questions, answers } = req.body;
 
-    if (!interviewId) {
-      return res.status(400).json({ success: false, message: 'Please specify interviewId' });
+    console.log(`[Report Synthesizer] Calling Gemini to evaluate full transcript statelessly`);
+
+    // Build Q&A list for Gemini
+    const transcript = [];
+    if (questions && questions.length > 0) {
+      questions.forEach((q, idx) => {
+        transcript.push({
+          questionText: q.questionText || q,
+          candidateAnswer: answers && answers[idx] ? answers[idx] : '(No answer provided)',
+          category: q.category || 'technical'
+        });
+      });
     }
-
-    const interview = await Interview.findById(interviewId);
-    if (!interview) {
-      return res.status(404).json({ success: false, message: 'Interview session not found' });
-    }
-
-    console.log(`[Report Synthesizer] Calling Gemini to evaluate full transcript for session: ${interviewId}`);
-
-    // Build Q&A list for Gemini - only include answered questions
-    const qaList = (interview.questions || []).filter(q => q.candidateAnswer && q.candidateAnswer.trim()).map(q => ({
-      questionText: q.questionText,
-      candidateAnswer: q.candidateAnswer,
-      category: q.category || 'technical'
-    }));
-
-    // If no answers recorded, use all questions with empty answers
-    const transcript = qaList.length > 0 ? qaList : (interview.questions || []).map(q => ({
-      questionText: q.questionText,
-      candidateAnswer: q.candidateAnswer || '(No answer provided)',
-      category: q.category || 'technical'
-    }));
 
     // Get Gemini-powered evaluation
     const aiReport = await synthesizeInterviewReport({
-      role: interview.role,
-      experience: interview.experience,
-      qaList: transcript
+      role: role || 'Software Engineer',
+      experience: experience || 'Mid-level',
+      qaList: transcript.length > 0 ? transcript : [{ questionText: 'General Tech', candidateAnswer: 'N/A' }]
     });
 
     const breakdown = {
@@ -50,49 +36,26 @@ exports.synthesizeReport = async (req, res) => {
     };
 
     const feedbackLogs = [
-      `Gemini AI completed comprehensive interview evaluation for role: ${interview.role}.`,
-      `Overall score: ${aiReport.overallScore}% | Technical: ${aiReport.technicalScore}% | Communication: ${aiReport.communicationScore}%`,
-      `Hiring Recommendation: ${aiReport.hiringRecommendation || 'See full report'}`,
+      `Gemini AI completed comprehensive stateless evaluation.`
     ];
 
-    // Check if report already exists
-    let report = await Report.findOne({ interview: interviewId });
-    if (!report) {
-      report = await Report.create({
-        user: userId,
-        interview: interviewId,
-        overallScore: aiReport.overallScore,
-        communicationScore: aiReport.communicationScore,
-        technicalScore: aiReport.technicalScore,
-        breakdown,
-        strengths: aiReport.strengths || [],
-        weaknesses: aiReport.weaknesses || [],
-        feedbackReport: aiReport.feedbackReport || 'No detailed feedback available.',
-        feedbackLogs,
-      });
-    } else {
-      report.overallScore = aiReport.overallScore;
-      report.communicationScore = aiReport.communicationScore;
-      report.technicalScore = aiReport.technicalScore;
-      report.breakdown = breakdown;
-      report.strengths = aiReport.strengths || [];
-      report.weaknesses = aiReport.weaknesses || [];
-      report.feedbackReport = aiReport.feedbackReport || 'No detailed feedback available.';
-      report.feedbackLogs = feedbackLogs;
-      await report.save();
-    }
-
-    interview.status = 'completed';
-    await interview.save();
+    const reportData = {
+      overallScore: aiReport.overallScore,
+      communicationScore: aiReport.communicationScore,
+      technicalScore: aiReport.technicalScore,
+      breakdown,
+      strengths: aiReport.strengths || [],
+      weaknesses: aiReport.weaknesses || [],
+      feedbackReport: aiReport.feedbackReport || 'No detailed feedback available.',
+      feedbackLogs,
+      hiringRecommendation: aiReport.hiringRecommendation || 'Hire',
+      hrScore: aiReport.hrScore || aiReport.communicationScore,
+    };
 
     res.status(201).json({
       success: true,
-      message: 'Gemini AI report synthesized successfully',
-      data: {
-        ...report.toObject(),
-        hiringRecommendation: aiReport.hiringRecommendation || 'Hire',
-        hrScore: aiReport.hrScore || aiReport.communicationScore,
-      },
+      message: 'Gemini AI report synthesized successfully (stateless)',
+      data: reportData,
     });
   } catch (error) {
     console.error('Report Synthesis Error:', error.message);
@@ -105,15 +68,7 @@ exports.synthesizeReport = async (req, res) => {
 // @access  Private
 exports.getReport = async (req, res) => {
   try {
-    const report = await Report.findOne({ interview: req.params.interviewId }).populate('interview');
-    if (!report) {
-      return res.status(404).json({ success: false, message: 'Performance report not found for this session' });
-    }
-
-    res.json({
-      success: true,
-      data: report,
-    });
+    res.status(404).json({ success: false, message: 'Persistent reports are disabled in stateless mode.' });
   } catch (error) {
     console.error('Get Report Error:', error.message);
     res.status(500).json({ success: false, message: error.message });

@@ -1,4 +1,3 @@
-const Interview = require('../models/Interview');
 const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
 
 // @desc    Initialize a new mock interview session with Gemini-generated resume-based questions
@@ -49,7 +48,8 @@ exports.startInterview = async (req, res) => {
       );
     }
 
-    const interview = await Interview.create({
+    const interviewData = {
+      _id: 'stateless_' + Date.now(),
       user: userId,
       role,
       experience,
@@ -57,12 +57,12 @@ exports.startInterview = async (req, res) => {
       jobDescription: jobDescription || '',
       questions: questionsList,
       status: 'speaking_active',
-    });
+    };
 
     res.status(201).json({
       success: true,
-      message: 'Interview session initialized with Gemini-personalized questions',
-      data: interview,
+      message: 'Interview session initialized with Gemini-personalized questions (stateless)',
+      data: interviewData,
     });
   } catch (error) {
     console.error('Start Interview Error:', error.message);
@@ -81,23 +81,11 @@ exports.submitAnswer = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please specify interviewId, questionIndex, and answerText' });
     }
 
-    const interview = await Interview.findById(interviewId);
-    if (!interview) {
-      return res.status(404).json({ success: false, message: 'Interview session not found' });
-    }
-
-    if (!interview.questions[questionIndex]) {
-      interview.questions.push({ questionText: 'Follow-up query node', candidateAnswer: answerText });
-    } else {
-      interview.questions[questionIndex].candidateAnswer = answerText;
-    }
-
-    await interview.save();
-
+    // Stateless execution - just confirm receipt
     res.json({
       success: true,
-      message: `Answer for question index ${questionIndex} recorded successfully`,
-      data: interview,
+      message: `Answer for question index ${questionIndex} processed statelessly`,
+      data: { _id: interviewId },
     });
   } catch (error) {
     console.error('Submit Answer Error:', error.message);
@@ -118,18 +106,8 @@ exports.evaluateAnswerRealtime = async (req, res) => {
 
     console.log(`[Evaluate] Running Gemini evaluation for Q${questionIndex + 1} - ${category}`);
 
-    // Save the answer to DB if interviewId provided
-    if (interviewId && interviewId !== 'demo_session_active' && questionIndex !== undefined) {
-      try {
-        const interview = await Interview.findById(interviewId);
-        if (interview && interview.questions[questionIndex]) {
-          interview.questions[questionIndex].candidateAnswer = candidateAnswer;
-          await interview.save();
-        }
-      } catch (dbErr) {
-        console.warn('[Evaluate] DB save skipped:', dbErr.message);
-      }
-    }
+    // DB Save block removed since we are now fully stateless
+    console.log(`[Evaluate] Stateless evaluation running for ${category}`);
 
     // Run Gemini evaluation
     const evaluation = await evaluateAnswer({
@@ -243,18 +221,8 @@ exports.submitAnswerAndGenerateFollowUp = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please specify interviewId, questionIndex, and candidateAnswer' });
     }
 
-    const interview = await Interview.findById(interviewId);
-    if (!interview) {
-      return res.status(404).json({ success: false, message: 'Interview session not found' });
-    }
-
-    if (interview.questions[questionIndex]) {
-      interview.questions[questionIndex].candidateAnswer = candidateAnswer;
-    }
-
-    const originalQuestionText = interview.questions[questionIndex]
-      ? interview.questions[questionIndex].questionText
-      : 'General technical capability';
+    // Extract original question statelessly from the frontend if passed
+    const originalQuestionText = req.body.originalQuestionText || 'General technical capability';
 
     // Use Gemini for follow-up generation
     const { GoogleGenerativeAI } = require('@google/generative-ai');
@@ -267,7 +235,7 @@ exports.submitAnswerAndGenerateFollowUp = async (req, res) => {
       const prompt = `You are a senior technical interviewer. A candidate answered the following question.
 Question: "${originalQuestionText}"
 Candidate Answer: "${candidateAnswer}"
-Role: ${interview.role}, Experience: ${interview.experience}
+Role: ${req.body.role || 'Software Engineer'}, Experience: ${req.body.experience || 'Mid-Level'}
 
 Generate ONE focused follow-up question that drills deeper into a specific point they mentioned or an important gap in their answer. Return ONLY the question text, nothing else.`;
 
@@ -288,19 +256,16 @@ Generate ONE focused follow-up question that drills deeper into a specific point
 
     const followUpNode = {
       questionText: `[Follow-Up] ${followUpQuestionText}`,
-      category: interview.questions[questionIndex] ? interview.questions[questionIndex].category : 'technical',
+      category: req.body.category || 'technical',
       candidateAnswer: ''
     };
 
-    interview.questions.splice(questionIndex + 1, 0, followUpNode);
-    await interview.save();
-
+    // Return the follow-up question to the frontend to handle state
     res.json({
       success: true,
-      message: 'Answer saved and Gemini follow-up question generated',
+      message: 'Gemini follow-up question generated (stateless)',
       data: {
-        followUpQuestion: followUpNode.questionText,
-        questions: interview.questions
+        followUpQuestion: followUpNode.questionText
       }
     });
   } catch (error) {

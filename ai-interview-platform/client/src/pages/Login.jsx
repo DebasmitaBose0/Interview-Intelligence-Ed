@@ -32,17 +32,15 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
-      
-      const res = await fetch('/api/auth/firebase', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email: fbUser.email, name: fbUser.displayName || email.split('@')[0], uid: fbUser.uid }) 
-      });
-      const d = await res.json();
-      if (d.success) {
-        showToast('Signed in successfully!');
-        setTimeout(() => { localStorage.setItem('camsense_token', d.data.token); setToken(d.data.token); setUser(d.data); setCurrentTab('home'); }, 1200);
-      } else { showToast(d.message || 'Invalid credentials on server', 'err'); }
+      const token = await fbUser.getIdToken();
+
+      showToast('Signed in successfully!');
+      setTimeout(() => { 
+        localStorage.setItem('camsense_token', token); 
+        setToken(token); 
+        setUser({ uid: fbUser.uid, name: fbUser.displayName || email.split('@')[0], email: fbUser.email }); 
+        setCurrentTab('home'); 
+      }, 1200);
     } catch (err) { 
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
         showToast('Invalid email or password', 'err');
@@ -57,17 +55,15 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
-      
-      const res = await fetch('/api/auth/firebase', { 
-        method: 'POST', 
-        headers: { 'Content-Type': 'application/json' }, 
-        body: JSON.stringify({ email: fbUser.email, name: fbUser.displayName, uid: fbUser.uid }) 
-      });
-      const d = await res.json();
-      if (d.success) {
-        showToast('Signed in with Google!');
-        setTimeout(() => { localStorage.setItem('camsense_token', d.data.token); setToken(d.data.token); setUser(d.data); setCurrentTab('home'); }, 1200);
-      } else { showToast(d.message || 'Server login failed', 'err'); }
+      const token = await fbUser.getIdToken();
+
+      showToast('Signed in with Google!');
+      setTimeout(() => { 
+        localStorage.setItem('camsense_token', token); 
+        setToken(token); 
+        setUser({ uid: fbUser.uid, name: fbUser.displayName, email: fbUser.email }); 
+        setCurrentTab('home'); 
+      }, 1200);
     } catch (err) {
       showToast('Google sign-in was cancelled or failed.', 'err');
     }

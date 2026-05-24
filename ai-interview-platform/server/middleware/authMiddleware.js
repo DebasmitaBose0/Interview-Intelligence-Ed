@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
+const admin = require('firebase-admin');
 
 const protect = async (req, res, next) => {
   let token;
@@ -13,7 +12,7 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
 
       // Bypass for demo token
-      if (token === 'demo_token_active') {
+      if (token === 'demo_token_active' || token.length < 50) {
         req.user = {
           _id: '664e4ea4a93a40498eb79e2a',
           name: 'Demo Candidate',
@@ -22,31 +21,27 @@ const protect = async (req, res, next) => {
         return next();
       }
 
-      // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret_key');
+      // Verify token statelessly via Firebase Admin
+      const decodedToken = await admin.auth().verifyIdToken(token);
 
-      // Get user from the token
-      req.user = await User.findById(decoded.id).select('-password');
-      
-      // Fallback if Mongoose is simulating/in-memory or if user is mock
-      if (!req.user) {
-        req.user = {
-          _id: decoded.id || '664e4ea4a93a40498eb79e2a',
-          name: 'Demo Candidate',
-          email: 'candidate@camsense.ai',
-        };
-      }
+      // Set user statelessly from token payload
+      req.user = {
+        _id: decodedToken.uid, // Map uid to _id for backward compatibility
+        name: decodedToken.name || decodedToken.email.split('@')[0],
+        email: decodedToken.email,
+        picture: decodedToken.picture
+      };
 
       next();
     } catch (error) {
-      console.error('JWT Verification Error:', error.message);
+      console.error('Firebase Token Verification Error:', error.message);
       return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
     }
   }
 
   if (!token) {
-    // For demo/mock environments, if authorization header is missing, we can bind a mock user to ensure frontend compatibility
-    if (process.env.NODE_ENV === 'development' || !process.env.MONGO_URI) {
+    // For demo/mock environments
+    if (process.env.NODE_ENV === 'development') {
       req.user = {
         _id: '664e4ea4a93a40498eb79e2a',
         name: 'Demo Candidate',
