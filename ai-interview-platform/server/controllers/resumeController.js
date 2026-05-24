@@ -1,4 +1,4 @@
-const Resume = require('../models/Resume');
+// Removed Resume model import as we are fully stateless
 const { extractTextFromBuffer } = require('../utils/pdfParser');
 const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
 const mammoth = require('mammoth');
@@ -51,42 +51,20 @@ exports.uploadResume = async (req, res) => {
     const tempFilePath = path.join(uploadDir, tempFileName);
     fs.writeFileSync(tempFilePath, buffer);
 
-    // Step 4: Upsert to MongoDB
-    let resume = await Resume.findOne({ user: req.user._id });
-    const resumeFields = {
-      fileName: originalname,
-      filePath: tempFilePath,
-      extractedText: rawText,
-      skills: geminiData.skills || [],
-      education: geminiData.education || [],
-      experience: geminiData.experience || [],
-      projects: geminiData.projects || [],
-      summary: geminiData.summary || ''
-    };
-
-    if (resume) {
-      if (resume.filePath && fs.existsSync(resume.filePath)) {
-        try { fs.unlinkSync(resume.filePath); } catch (e) {}
-      }
-      Object.assign(resume, resumeFields);
-      await resume.save();
-    } else {
-      resume = await Resume.create({ user: req.user._id, ...resumeFields });
-    }
-
-    console.log(`[Resume Upload] Saved. Skills extracted: ${resume.skills.length}`);
+    console.log(`[Resume Upload] Processed statelessly. Skills extracted: ${geminiData.skills?.length || 0}`);
 
     res.status(200).json({
       success: true,
-      message: `Resume analyzed by Gemini AI. Extracted ${resume.skills.length} skills.`,
+      message: `Resume analyzed by Gemini AI statelessly. Extracted ${geminiData.skills?.length || 0} skills.`,
       data: {
-        id: resume._id,
-        fileName: resume.fileName,
-        skills: resume.skills,
-        education: resume.education,
-        experience: resume.experience,
-        projects: resume.projects,
-        summary: resume.summary
+        id: `stateless_${Date.now()}`,
+        fileName: originalname,
+        skills: geminiData.skills || [],
+        education: geminiData.education || [],
+        experience: geminiData.experience || [],
+        projects: geminiData.projects || [],
+        summary: geminiData.summary || '',
+        extractedText: rawText // Return this for JD matching if needed
       }
     });
 
@@ -102,22 +80,7 @@ exports.uploadResume = async (req, res) => {
  */
 exports.getResume = async (req, res) => {
   try {
-    const resume = await Resume.findOne({ user: req.user._id });
-    if (!resume) {
-      return res.status(404).json({ success: false, message: 'No resume found. Please upload your resume first.' });
-    }
-    res.status(200).json({
-      success: true,
-      data: {
-        id: resume._id,
-        fileName: resume.fileName,
-        skills: resume.skills,
-        education: resume.education,
-        experience: resume.experience,
-        projects: resume.projects,
-        summary: resume.summary || ''
-      }
-    });
+    res.status(404).json({ success: false, message: 'Persistent resume profiles are disabled in stateless mode.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -135,13 +98,13 @@ exports.analyzeJobDescription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please paste a complete job description (at least 20 characters).' });
     }
 
-    const resume = await Resume.findOne({ user: req.user._id });
-    if (!resume) {
-      return res.status(404).json({ success: false, message: 'Please upload your resume first before running job description analysis.' });
+    // In stateless mode, the frontend must pass the resume content to this endpoint
+    const { resumeContent } = req.body;
+    
+    if (!resumeContent) {
+      return res.status(400).json({ success: false, message: 'Missing resume content in stateless payload.' });
     }
 
-    // Use full extracted text for best Gemini accuracy
-    const resumeContent = resume.extractedText || resume.skills.join(', ');
     const analysisResult = await analyzeSkillsWithGemini(resumeContent, jobDescription);
 
     res.status(200).json({

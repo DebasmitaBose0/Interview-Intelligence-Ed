@@ -69,7 +69,10 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       const response = await fetch('/api/resume/analyze-jd', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ jobDescription }),
+        body: JSON.stringify({ 
+          jobDescription,
+          resumeContent: parsedProfile?.extractedText || parsedProfile?.skills?.join(', ') || ''
+        }),
       });
       const resJson = await response.json();
       if (resJson.success && resJson.data) { setMatchData(resJson.data); }
