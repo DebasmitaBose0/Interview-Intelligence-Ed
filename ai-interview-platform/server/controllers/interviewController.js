@@ -295,12 +295,31 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
     }
 
     const { extractResumeData, analyzeSkillsWithGemini } = require('../services/geminiService');
-    
-    // Parse resume with Gemini
-    const resumeData = await extractResumeData(resumeText);
-    
-    // Analyze skills with Gemini
-    const jdAnalysis = await analyzeSkillsWithGemini(resumeText, jobDescription);
+    const { parseResumeText } = require('../utils/resumeParser');
+
+    let resumeData;
+    try {
+      resumeData = await extractResumeData(resumeText);
+    } catch (geminiErr) {
+      console.warn(`[Analyze Resume] Gemini extraction failed (${geminiErr.message}). Using local parser...`);
+      const localData = parseResumeText(resumeText);
+      resumeData = { skills: localData.skills || [], education: localData.education || [], experience: localData.experience || [], projects: localData.projects || [], summary: '' };
+    }
+
+    let jdAnalysis;
+    try {
+      jdAnalysis = await analyzeSkillsWithGemini(resumeText, jobDescription);
+    } catch (geminiErr) {
+      console.warn(`[Analyze Resume] Gemini JD analysis failed (${geminiErr.message}). Using local matching...`);
+      const jdLower = (jobDescription || '').toLowerCase();
+      const matching = (resumeData.skills || []).filter(s => jdLower.includes(s.toLowerCase()));
+      jdAnalysis = {
+        matchPercentage: resumeData.skills.length > 0 ? Math.max(Math.round((matching.length / resumeData.skills.length) * 100), 10) : 30,
+        matchingSkills: matching,
+        missingSkills: (resumeData.skills || []).filter(s => !jdLower.includes(s.toLowerCase())),
+        recommendation: 'AI analysis temporarily unavailable. Basic skill matching applied.',
+      };
+    }
 
     res.json({
       success: true,

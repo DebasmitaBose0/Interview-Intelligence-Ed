@@ -41,8 +41,25 @@ exports.uploadResume = async (req, res) => {
 
     console.log(`[Resume Upload] Extracted ${rawText.length} characters. Sending to Gemini...`);
 
-    // Step 2: Gemini AI — extract structured profile (replaces all NLP/regex)
-    const geminiData = await extractResumeData(rawText);
+    // Step 2: Try Gemini AI first, fall back to local parser if Gemini is unavailable
+    let geminiData;
+    let parseSource = 'gemini';
+
+    try {
+      geminiData = await extractResumeData(rawText);
+    } catch (geminiErr) {
+      console.warn(`[Resume Upload] Gemini unavailable (${geminiErr.message}). Falling back to local parser...`);
+      const { parseResumeText } = require('../utils/resumeParser');
+      const localData = parseResumeText(rawText);
+      geminiData = {
+        skills: localData.skills || [],
+        education: localData.education || [],
+        experience: localData.experience || [],
+        projects: localData.projects || [],
+        summary: '',
+      };
+      parseSource = 'local';
+    }
 
     // Step 3: Save file to disk
     const uploadDir = path.join(__dirname, '../../uploads');
@@ -51,11 +68,13 @@ exports.uploadResume = async (req, res) => {
     const tempFilePath = path.join(uploadDir, tempFileName);
     fs.writeFileSync(tempFilePath, buffer);
 
-    console.log(`[Resume Upload] Processed statelessly. Skills extracted: ${geminiData.skills?.length || 0}`);
+    console.log(`[Resume Upload] Processed via ${parseSource}. Skills extracted: ${geminiData.skills?.length || 0}`);
 
     res.status(200).json({
       success: true,
-      message: `Resume analyzed by Gemini AI statelessly. Extracted ${geminiData.skills?.length || 0} skills.`,
+      message: parseSource === 'gemini'
+        ? `Resume analyzed by Gemini AI. Extracted ${geminiData.skills?.length || 0} skills.`
+        : `Resume analyzed locally (AI temporarily unavailable). Extracted ${geminiData.skills?.length || 0} skills. Your interview will still work normally.`,
       data: {
         id: `stateless_${Date.now()}`,
         fileName: originalname,
@@ -64,7 +83,7 @@ exports.uploadResume = async (req, res) => {
         experience: geminiData.experience || [],
         projects: geminiData.projects || [],
         summary: geminiData.summary || '',
-        extractedText: rawText // Return this for JD matching if needed
+        extractedText: rawText
       }
     });
 
@@ -105,11 +124,35 @@ exports.analyzeJobDescription = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Missing resume content in stateless payload.' });
     }
 
-    const analysisResult = await analyzeSkillsWithGemini(resumeContent, jobDescription);
+    let analysisResult;
+    try {
+      analysisResult = await analyzeSkillsWithGemini(resumeContent, jobDescription);
+    } catch (geminiErr) {
+      console.warn(`[JD Analysis] Gemini unavailable (${geminiErr.message}). Using local skill matching...`);
+      const { parseResumeText } = require('../utils/resumeParser');
+      const resumeData = parseResumeText(resumeContent);
+      const jdLower = jobDescription.toLowerCase();
+      const matching = resumeData.skills.filter(s => jdLower.includes(s.toLowerCase()));
+      const missing = resumeData.skills.length > 0
+        ? resumeData.skills.filter(s => !jdLower.includes(s.toLowerCase()))
+        : [];
+      const matchPct = resumeData.skills.length > 0 ? Math.round((matching.length / Math.max(matching.length + missing.length, 1)) * 100) : 30;
+      analysisResult = {
+        success: true,
+        source: 'local-fallback',
+        matchPercentage: Math.max(matchPct, 10),
+        jdSkills: [],
+        matchingSkills: matching,
+        missingSkills: missing,
+        recommendation: 'AI analysis is temporarily unavailable. This is a basic skill-matching result.',
+      };
+    }
 
     res.status(200).json({
       success: true,
-      message: 'Job description analyzed with Gemini AI',
+      message: analysisResult.source === 'local-fallback'
+        ? 'Job description analyzed locally (AI temporarily unavailable)'
+        : 'Job description analyzed with Gemini AI',
       data: analysisResult
     });
 

@@ -5,15 +5,25 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
 
-  const [questions, setQuestions] = useState(
-    globalState.questions && globalState.questions.length > 0
-      ? globalState.questions.filter(q => q.category !== 'coding')
-      : [
-          { questionText: 'Explain the major architectural constraints of this track.', category: 'technical' },
-          { questionText: 'How do you profile, identify, and eliminate performance bottlenecks?', category: 'technical' },
-          { questionText: 'How do you resolve design conflicts inside highly concurrent codebases?', category: 'technical' },
-        ]
-  );
+  const [questions, setQuestions] = useState(() => {
+    if (globalState.questions && globalState.questions.length > 0) {
+      return globalState.questions.filter(q => q.category !== 'coding');
+    }
+    const fallbackPool = [
+      { questionText: 'Explain the major architectural constraints of this track.', category: 'technical' },
+      { questionText: 'How do you profile, identify, and eliminate performance bottlenecks?', category: 'technical' },
+      { questionText: 'How do you resolve design conflicts inside highly concurrent codebases?', category: 'technical' },
+      { questionText: 'Walk me through how you would debug a memory leak in a production application.', category: 'technical' },
+      { questionText: 'How do you decide between building a feature in-house versus using a third-party library?', category: 'technical' },
+      { questionText: 'Describe your approach to handling backward compatibility when releasing breaking changes.', category: 'technical' },
+      { questionText: 'How do you ensure data consistency in a system with multiple data stores?', category: 'technical' },
+      { questionText: 'Explain how you would design a robust error handling strategy for a distributed system.', category: 'technical' },
+      { questionText: 'What is your approach to capacity planning and load testing before a major product launch?', category: 'technical' },
+      { questionText: 'How do you handle schema evolution in a database-backed application over time?', category: 'technical' },
+    ];
+    const shuffled = [...fallbackPool].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 3);
+  });
 
   const [currentIdx, setCurrentIdx] = useState(0);
   const [isRecording, setIsRecording] = useState(false);

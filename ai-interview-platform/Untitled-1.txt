@@ -1,0 +1,17 @@
+# AURELIUS AI | Interview Session
+
+[ANALYTICS](https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzJmZDg5MTg4NTkyMzQ3ZGE5YmI1NDg1NWIyZDI1YWI5EgsSBxDMjJqWtwEYAZIBJAoKcHJvamVjdF9pZBIWQhQxNjcyMDk1NTE5NzU3OTg0MjgxNg&filename=&opi=96797242)
+[ARCHIVE](https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzJmZDg5MTg4NTkyMzQ3ZGE5YmI1NDg1NWIyZDI1YWI5EgsSBxDMjJqWtwEYAZIBJAoKcHJvamVjdF9pZBIWQhQxNjcyMDk1NTE5NzU3OTg0MjgxNg&filename=&opi=96797242)
+[SETTINGS](https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzJmZDg5MTg4NTkyMzQ3ZGE5YmI1NDg1NWIyZDI1YWI5EgsSBxDMjJqWtwEYAZIBJAoKcHJvamVjdF9pZBIWQhQxNjcyMDk1NTE5NzU3OTg0MjgxNg&filename=&opi=96797242)
+Synthesizing Query...
+
+# Assessment Session: Frontend Engineer Track
+PROGRESS: 3 / 8 QUESTIONS COMPLETED
+CURRENT QUESTION
+
+## How do you architect a scalable frontend application to handle high concurrency and real-time data streams?
+
+### YOUR RESPONSE
+Transcribing audio feed...
+"To architect a scalable frontend for high concurrency, I would first implement a robust state management layer, likely using an event-driven architecture with something like Redux Toolkit or Zustand combined with WebSocket connections for real-time streams..."
+STATUS: AI finished speaking. Voice channels active. Speak now.

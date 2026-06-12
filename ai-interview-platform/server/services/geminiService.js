@@ -12,6 +12,24 @@ const getModel = () => {
   });
 };
 
+const callGeminiWithRetry = async (model, promptContent, maxRetries = 3) => {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await model.generateContent(promptContent);
+      return result;
+    } catch (err) {
+      const isRetryable = err.message && (err.message.includes('503') || err.message.includes('429') || err.message.includes('high demand') || err.message.includes('overloaded') || err.message.includes('UNAVAILABLE'));
+      if (isRetryable && attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt) + Math.random() * 500, 8000);
+        console.warn(`[Gemini] Attempt ${attempt}/${maxRetries} failed (${err.message}). Retrying in ${Math.round(delay)}ms...`);
+        await new Promise(r => setTimeout(r, delay));
+      } else {
+        throw err;
+      }
+    }
+  }
+};
+
 /**
  * PATH 1 — Resume Upload Flow
  * Uses Gemini to extract skills, education, experience and projects from raw resume text.
@@ -45,7 +63,7 @@ Rules:
 - Return empty arrays [] if a section is not found
 `;
 
-  const result = await model.generateContent({
+  const result = await callGeminiWithRetry(model, {
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
@@ -93,7 +111,7 @@ Respond ONLY with a valid raw JSON object:
 }
 `;
 
-  const result = await model.generateContent({
+  const result = await callGeminiWithRetry(model, {
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
@@ -118,9 +136,34 @@ const generateQuestionsFromResume = async ({ role, experience, skills, education
   const projectsStr = Array.isArray(projects) && projects.length > 0 ? projects.slice(0, 3).join('; ') : 'No projects listed';
   const expStr = Array.isArray(workExp) && workExp.length > 0 ? workExp.slice(0, 3).join('; ') : 'No experience listed';
 
+  const focusAreas = [
+    'system design and architecture', 'debugging and troubleshooting', 'performance optimization',
+    'security best practices', 'testing strategies', 'CI/CD and DevOps', 'code review practices',
+    'API design', 'database design and queries', 'scalability challenges', 'microservices patterns',
+    'real-time systems', 'data structures deep dive', 'concurrency and parallelism',
+    'cloud infrastructure', 'monitoring and observability', 'design patterns', 'refactoring legacy code',
+    'edge cases and error handling', 'trade-off analysis'
+  ];
+  const shuffled = focusAreas.sort(() => Math.random() - 0.5);
+  const selectedFocus = shuffled.slice(0, 3).join(', ');
+
+  const difficultyAngles = [
+    'Ask one question that starts simple but has deep follow-up layers.',
+    'Include a question that requires comparing two approaches and justifying a choice.',
+    'Ask one question that involves a real-world scenario with constraints.',
+    'Include a question where the candidate must identify a flaw in a given approach.',
+    'Ask a question that requires the candidate to estimate or do back-of-envelope math.',
+    'Include a question about handling failure modes or edge cases in production.',
+  ];
+  const selectedAngle = difficultyAngles[Math.floor(Math.random() * difficultyAngles.length)];
+
+  const sessionSeed = Math.random().toString(36).substring(2, 10);
+
   const prompt = `
 You are a senior technical interviewer at a top tech company.
-Generate a personalised mock interview question set specifically tailored to THIS candidate's resume.
+Generate a COMPLETELY NEW and UNIQUE set of personalised mock interview questions specifically tailored to THIS candidate's resume.
+
+Session ID: ${sessionSeed} (use this to ensure uniqueness — every session must produce entirely different questions)
 
 Candidate Profile:
 - Target Role: ${role}
@@ -137,6 +180,10 @@ IMPORTANT INSTRUCTIONS:
 2. For example, if they have "Python" in skills, ask about Python specifically. If they have a project, ask about it.
 3. Mix difficulty levels appropriate for their stated experience.
 4. Generate EXACTLY 5 questions total across categories. For example: 3 technical, 1 HR, 1 coding. Do not exceed 5 questions.
+5. CRITICAL: You MUST generate DIFFERENT questions every single time. Never repeat the same questions across sessions.
+6. For this session, focus your technical questions around: ${selectedFocus}.
+7. ${selectedAngle}
+8. Vary question styles: mix open-ended, scenario-based, "how would you", "walk me through", and "compare X vs Y" formats.
 
 Respond ONLY with a valid raw JSON object. Replace the bracketed text with your actual generated questions:
 {
@@ -155,7 +202,7 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
 `;
 
   try {
-    const result = await model.generateContent({
+    const result = await callGeminiWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
@@ -164,22 +211,54 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
     return data;
   } catch (err) {
     console.error('[Gemini] Question generation failed:', err.message);
-    // Fallback questions if Gemini fails
+    const primarySkill = skillsStr.split(',')[0]?.trim() || 'your primary stack';
+    const technicalPool = [
+      `Explain how you would architect a scalable system using ${primarySkill}.`,
+      `What design patterns do you find most useful in your work, and why?`,
+      `How do you approach debugging a performance issue in production?`,
+      `Walk me through your development workflow when starting a new feature.`,
+      `How would you design an API rate limiter using ${primarySkill}?`,
+      `Describe how you handle database migrations in a production environment.`,
+      `What is your approach to writing testable code with ${primarySkill}?`,
+      `How would you implement caching to reduce latency in a high-traffic application?`,
+      `Explain the trade-offs between SQL and NoSQL databases for your use case.`,
+      `Walk me through how you would set up monitoring and alerting for a microservice.`,
+      `How do you handle authentication and authorization in your applications?`,
+      `Describe a time you had to optimize a slow database query. What was your approach?`,
+      `How would you design a message queue system for asynchronous task processing?`,
+      `Explain how you would implement CI/CD pipelines for a ${primarySkill} project.`,
+      `What strategies do you use for handling errors and retries in distributed systems?`,
+    ];
+    const hrPool = [
+      `Tell me about a challenging project from your background and how you overcame obstacles.`,
+      `How do you stay updated with new technologies in your field?`,
+      `Describe a situation where you had to collaborate closely with a team under a tight deadline.`,
+      `Tell me about a time you disagreed with a technical decision. How did you handle it?`,
+      `How do you prioritize tasks when you have multiple urgent deadlines?`,
+      `Describe a situation where you had to learn a new technology quickly for a project.`,
+      `How do you give and receive constructive feedback during code reviews?`,
+      `Tell me about a project that failed. What did you learn from it?`,
+      `How do you handle ambiguous requirements from stakeholders?`,
+      `Describe your approach to mentoring junior developers.`,
+    ];
+    const codingPool = [
+      `Write a function that finds all duplicate elements in an array and returns them with their occurrence count. Optimize for O(N) time complexity.`,
+      `Implement a function that validates whether a string of brackets is balanced. Support (), [], and {}.`,
+      `Write a function to find the longest substring without repeating characters.`,
+      `Implement a debounce function that delays invoking a callback until after a specified wait time.`,
+      `Write a function that flattens a deeply nested object into dot-notation keys.`,
+      `Implement a basic LRU cache with get and put operations in O(1) time.`,
+      `Write a function that merges two sorted arrays into one sorted array without using built-in sort.`,
+      `Implement a function to find the first non-repeating character in a string.`,
+    ];
+    const pick = (pool, count) => {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    };
     return {
-      technical: [
-        `Explain how you would architect a scalable system using ${skillsStr.split(',')[0] || 'your primary stack'}.`,
-        `What design patterns do you find most useful in your work, and why?`,
-        `How do you approach debugging a performance issue in production?`,
-        `Walk me through your development workflow when starting a new feature.`
-      ],
-      hr: [
-        `Tell me about a challenging project from your background and how you overcame obstacles.`,
-        `How do you stay updated with new technologies in your field?`,
-        `Describe a situation where you had to collaborate closely with a team under a tight deadline.`
-      ],
-      coding: [
-        `Write a function that finds all duplicate elements in an array and returns them with their occurrence count. Optimize for O(N) time complexity.`
-      ]
+      technical: pick(technicalPool, 3),
+      hr: pick(hrPool, 1),
+      coding: pick(codingPool, 1),
     };
   }
 };
@@ -225,7 +304,7 @@ CRITICAL: Do NOT just give a 5/10 by default. Actually evaluate the answer stric
 `;
 
   try {
-    const result = await model.generateContent({
+    const result = await callGeminiWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
@@ -292,7 +371,7 @@ Respond ONLY with a valid raw JSON object:
 }
 `;
 
-  const result = await model.generateContent({
+  const result = await callGeminiWithRetry(model, {
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
@@ -382,10 +461,10 @@ ${pistonError || 'No errors.'}
 
   console.log(`[Gemini] Simulating ${language} execution for role: ${role}...`);
   try {
-    const result = await model.generateContent({
+    const result = await callGeminiWithRetry(model, {
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
-    
+
     let rawText = result.response.text().trim();
     if (rawText.startsWith('\`\`\`json')) rawText = rawText.substring(7);
     if (rawText.startsWith('\`\`\`')) rawText = rawText.substring(3);

@@ -90,66 +90,138 @@ Output strictly a JSON object with this EXACT structure, containing no other tex
     
     throw new Error('Ollama output did not match expected JSON schema boundaries');
   } catch (error) {
-    console.warn(`⚠️ Ollama offline or inactive (${error.message}). Invoking custom deterministic generator...`);
-    
-    // Developer Offline Deterministic Fallback Engine
-    const mockDb = {
+    console.warn(`⚠️ Ollama offline or inactive (${error.message}). Invoking randomized fallback generator...`);
+
+    const pick = (pool, count) => {
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      return shuffled.slice(0, count);
+    };
+
+    const questionPools = {
       'Frontend Engineer': {
         technical: [
           `How would you optimize React's reconciliation engine specifically when managing complex ${skillsStr} components?`,
-          `Explain how you would minimize paint-reflow barriers in a production layout containing advanced elements.`
+          `Explain how you would minimize paint-reflow barriers in a production layout containing advanced elements.`,
+          `How do you implement code splitting and lazy loading to improve initial page load times?`,
+          `Describe your approach to managing global state in a large React application. When would you choose Context API vs Redux vs Zustand?`,
+          `How do you handle accessibility (a11y) compliance in a component library?`,
+          `What is your strategy for handling cross-browser compatibility issues in CSS?`,
+          `How do you implement responsive design that works across mobile, tablet, and desktop?`,
+          `Explain how you would build a real-time collaborative editing feature in the browser.`,
+          `How do you optimize images and assets for web performance?`,
+          `What is your approach to writing end-to-end tests for a frontend application?`,
         ],
         hr: [
           `Describe a situation at your ${experience} level where you had to negotiate layout design trade-offs with backend developers.`,
-          `How do you manage sprint boundaries when client specifications shift mid-cycle?`
+          `How do you manage sprint boundaries when client specifications shift mid-cycle?`,
+          `Tell me about a time you improved developer experience or tooling for your team.`,
+          `How do you handle feedback when your UI design is rejected by stakeholders?`,
+          `Describe a time you had to deliver a frontend feature with incomplete backend APIs.`,
+          `How do you balance pixel-perfect design implementation with development velocity?`,
         ],
         coding: [
-          `Write a JavaScript function that flattens a deeply nested array structure, filtering out null values while maintaining O(N) space efficiency.`
+          `Write a JavaScript function that flattens a deeply nested array structure, filtering out null values while maintaining O(N) space efficiency.`,
+          `Implement a custom React hook that debounces API calls and cancels stale requests.`,
+          `Write a function to deep-clone an object without using JSON.parse/stringify (handle circular references).`,
+          `Implement a virtual scrolling component that efficiently renders 10,000 list items.`,
+          `Write a throttle function with leading and trailing edge options.`,
         ]
       },
       'Backend Engineer': {
         technical: [
           `Explain your approach to designing a high-throughput API layer using ${skillsStr} while maintaining optimal database lock boundaries.`,
-          `How do you design a distributed rate-limiter across multi-tenant servers?`
+          `How do you design a distributed rate-limiter across multi-tenant servers?`,
+          `How would you implement database sharding for a rapidly growing user table?`,
+          `Explain your strategy for handling long-running background jobs and task queues.`,
+          `How do you design idempotent APIs and handle retry logic for network failures?`,
+          `Describe your approach to managing database connection pooling under heavy load.`,
+          `How would you implement a pub/sub system for real-time notifications?`,
+          `What is your approach to API versioning in a production microservice ecosystem?`,
+          `How do you handle data consistency across microservices without distributed transactions?`,
+          `Explain how you would design a file upload service that handles large files (>1GB) reliably.`,
         ],
         hr: [
           `Detail a scenario where you had to refactor a slow backend database query under extreme production load.`,
-          `How do you mentor junior backend developers to adopt optimal secure coding practices?`
+          `How do you mentor junior backend developers to adopt optimal secure coding practices?`,
+          `Tell me about a time you had to make a critical architectural decision under pressure.`,
+          `How do you handle technical debt while delivering new features on schedule?`,
+          `Describe a production incident you resolved and what you learned from it.`,
+          `How do you communicate complex backend constraints to frontend developers or product managers?`,
         ],
         coding: [
-          `Write a Node.js script that parses a stream of incoming HTTP logs, extracting key metrics and returning top latency endpoints in O(1) time.`
+          `Write a Node.js script that parses a stream of incoming HTTP logs, extracting key metrics and returning top latency endpoints in O(1) time.`,
+          `Implement a simple in-memory key-value store with TTL-based expiration.`,
+          `Write a middleware function that implements request rate limiting using the sliding window algorithm.`,
+          `Implement a basic connection pool manager that reuses database connections.`,
+          `Write a function to detect and break circular dependencies in a module graph.`,
         ]
       },
       'Fullstack Engineer': {
         technical: [
           `Describe the performance trade-offs between utilizing Server-Sent Events (SSE) versus WebSockets in ${skillsStr} applications.`,
-          `How do you secure serverless functions against advanced cross-site scripting vulnerabilities?`
+          `How do you secure serverless functions against advanced cross-site scripting vulnerabilities?`,
+          `How do you handle authentication flows (OAuth, JWT) end-to-end from frontend to backend?`,
+          `Explain how you would design a full-stack feature with offline support and sync capabilities.`,
+          `How do you manage environment-specific configurations across frontend and backend deployments?`,
+          `Describe your approach to setting up a monorepo for a full-stack application.`,
+          `How would you implement server-side rendering vs static site generation for SEO-critical pages?`,
+          `What is your strategy for handling file uploads from the browser through to cloud storage?`,
+          `How do you implement real-time features using WebSockets in a full-stack application?`,
+          `Explain how you would design a permissions system that spans both UI and API layers.`,
         ],
         hr: [
           `As a ${experience} candidate, how do you balance business priority timelines with technical debt refactoring?`,
-          `Tell us about a time you owned a full-stack feature launch from database schema design to frontend deployment.`
+          `Tell us about a time you owned a full-stack feature launch from database schema design to frontend deployment.`,
+          `How do you decide which parts of a feature to build on the frontend vs backend?`,
+          `Describe a time you had to quickly switch between frontend and backend work to unblock a release.`,
+          `How do you handle disagreements between design, frontend, and backend teams?`,
+          `Tell me about a time you identified and fixed a performance bottleneck that spanned the full stack.`,
         ],
         coding: [
-          `Design a custom event emitter interface supporting subscription, publishing, and unsubscribe functions.`
+          `Design a custom event emitter interface supporting subscription, publishing, and unsubscribe functions.`,
+          `Build a REST API endpoint and its corresponding React component that implements paginated search with debounced input.`,
+          `Write a function to implement optimistic UI updates with rollback on API failure.`,
+          `Implement a basic form validation library that works both client-side and server-side.`,
+          `Write a caching utility that stores API responses with TTL and automatic invalidation.`,
         ]
       },
       'AI / ML Engineer': {
         technical: [
           `Explain the mathematical difference between standard self-attention and FlashAttention when training on ${skillsStr} models.`,
-          `How do you mitigate semantic embedding drift inside large retrieval vector indexes?`
+          `How do you mitigate semantic embedding drift inside large retrieval vector indexes?`,
+          `Describe your approach to feature engineering for tabular data vs unstructured text data.`,
+          `How would you design an A/B testing framework for ML model deployments?`,
+          `Explain the trade-offs between fine-tuning a pre-trained model vs training from scratch.`,
+          `How do you handle class imbalance in a classification problem?`,
+          `Describe your approach to implementing a recommendation system from scratch.`,
+          `How would you design a real-time inference pipeline with sub-100ms latency requirements?`,
+          `Explain how you would implement RAG (Retrieval-Augmented Generation) for a domain-specific chatbot.`,
+          `How do you monitor and detect model drift in production?`,
         ],
         hr: [
           `Describe a situation where a model's production outputs began to show bias, and explain how you resolved it.`,
-          `How do you articulate AI model black-box decisions to non-technical business partners?`
+          `How do you articulate AI model black-box decisions to non-technical business partners?`,
+          `Tell me about a time your ML experiment results didn't match expectations. What did you do?`,
+          `How do you decide when to use a simple heuristic vs a complex ML model?`,
+          `Describe your experience collaborating with data engineers to build production data pipelines.`,
+          `How do you handle ethical concerns when building AI-powered products?`,
         ],
         coding: [
-          `Write a python/JS matrix multiplication helper function that optimizes row-wise cache access patterns.`
+          `Write a python/JS matrix multiplication helper function that optimizes row-wise cache access patterns.`,
+          `Implement a k-nearest neighbors classifier from scratch without using ML libraries.`,
+          `Write a function to compute TF-IDF scores for a collection of documents.`,
+          `Implement a simple gradient descent optimizer for linear regression.`,
+          `Write a tokenizer that splits text into word pieces using a basic BPE-like algorithm.`,
         ]
       }
     };
 
-    const trackMatch = mockDb[role] || mockDb['Frontend Engineer'];
-    return trackMatch;
+    const pools = questionPools[role] || questionPools['Frontend Engineer'];
+    return {
+      technical: pick(pools.technical, 2),
+      hr: pick(pools.hr, 2),
+      coding: pick(pools.coding, 1),
+    };
   }
 };
 
