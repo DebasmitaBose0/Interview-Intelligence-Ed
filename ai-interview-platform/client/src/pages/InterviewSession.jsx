@@ -236,7 +236,7 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     stopVoiceRecording(); setTimerActive(false); setIsEvaluating(true);
     setSystemAlert(text ? 'Evaluating your response…' : 'Time limit reached. 0 points awarded.');
     
-    let answerScore = text ? 8.5 : 0; // Default technical fallback
+    let answerScore = 0;
     try {
       if (text) {
         const token = localStorage.getItem('camsense_token') || 'demo_token_active';
@@ -247,8 +247,9 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
         });
         const json = await res.json();
         if (json.success && json.data) {
-          setSystemAlert(`Score: ${json.data.score}/10 — ${json.data.feedback}`);
-          answerScore = Number(json.data.score) || 8.5;
+          const parsed = Number(json.data.score);
+          answerScore = Number.isFinite(parsed) ? parsed : 0;
+          setSystemAlert(`Score: ${answerScore}/10 — ${json.data.feedback}`);
           await new Promise(r => setTimeout(r, 4000));
         }
       } else {

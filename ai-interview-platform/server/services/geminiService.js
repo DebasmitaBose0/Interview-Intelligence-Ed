@@ -273,19 +273,19 @@ const evaluateAnswer = async ({ question, candidateAnswer, role, category }) => 
   const model = getModel();
 
   const prompt = `
-You are a senior technical interviewer evaluating a candidate's answer during a mock interview.
+You are an extremely strict senior technical interviewer evaluating a candidate's answer during a mock interview.
 
 Role Being Interviewed For: ${role}
 Question Category: ${category}
 Interview Question: "${question}"
 Candidate's Answer: "${candidateAnswer}"
 
-Evaluate this answer thoroughly and fairly.
+Evaluate this answer with ZERO leniency.
 
 Respond ONLY with a valid raw JSON object:
 {
   "score": <integer 0-10>,
-  "verdict": "Excellent" | "Good" | "Average" | "Needs Improvement",
+  "verdict": "Excellent" | "Good" | "Average" | "Needs Improvement" | "Poor",
   "strengths": ["key strength 1 from the answer", "key strength 2"],
   "improvements": ["specific area to improve 1", "specific area to improve 2"],
   "missedPoints": ["important concept they forgot to mention 1", "concept 2"],
@@ -293,14 +293,26 @@ Respond ONLY with a valid raw JSON object:
   "feedback": "A personalized 2-3 sentence coaching feedback message addressing the candidate directly"
 }
 
-Scoring Guide (BE STRICT):
-- 9-10: Exceptional - Flawless, deep technical understanding, perfectly explained.
-- 7-8: Good - Solid answer, but missed one or two minor technical nuances.
-- 5-6: Average - Basic textbook definition, lacking real-world depth or examples.
-- 3-4: Below average - Confused, partial answer with major missing concepts.
-- 0-2: Poor - Completely wrong or irrelevant answer.
+STRICT SCORING RULES — YOU MUST FOLLOW THESE EXACTLY:
 
-CRITICAL: Do NOT just give a 5/10 by default. Actually evaluate the answer strictly. If they give a generic or vague answer, give them a 3 or 4. If they give an amazing answer, give them an 8 or 9.
+SCORE 0 — MANDATORY for ANY of these cases:
+- The answer is gibberish, greetings, or filler (e.g. "hi", "hello", "hey", "ok", "yes", "no", "I don't know", "pass", "nothing", "good question", random words)
+- The answer has NO technical or relevant content whatsoever
+- The answer is completely off-topic and does not address the question AT ALL
+- The answer is just repeating the question back
+- The answer is under 15 words and contains zero relevant technical terms
+
+SCORE 1-2 — The answer mentions the topic vaguely but is mostly wrong, confused, or irrelevant.
+SCORE 3-4 — The answer shows some awareness but has major gaps, misconceptions, or is mostly surface-level.
+SCORE 5-6 — The answer covers basics correctly but lacks depth, examples, or real-world understanding.
+SCORE 7-8 — Solid answer with good depth, but missed one or two nuances.
+SCORE 9-10 — Exceptional, thorough, with real-world examples and deep understanding. Very rare.
+
+CRITICAL RULES:
+- If the answer does not demonstrate knowledge related to the question, the score MUST be 0-2. No exceptions.
+- Do NOT be generous. A real interviewer would reject "hi hello" as a non-answer.
+- Short, vague, or lazy answers should NEVER score above 3.
+- The default score is NOT 5. Start from 0 and add points only for demonstrated knowledge.
 `;
 
   try {
@@ -309,20 +321,21 @@ CRITICAL: Do NOT just give a 5/10 by default. Actually evaluate the answer stric
     });
 
     const data = JSON.parse(result.response.text());
-    data.score = Math.min(Math.max(Number(data.score) || 5, 0), 10);
+    const parsedScore = Number(data.score);
+    data.score = Math.min(Math.max(Number.isFinite(parsedScore) ? parsedScore : 0, 0), 10);
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
     return { success: true, ...data };
   } catch (err) {
     console.error('[Gemini] Answer evaluation failed:', err.message);
     return {
       success: false,
-      score: 5,
-      verdict: 'Average',
-      strengths: ['Answer recorded successfully.'],
-      improvements: ['Could not auto-evaluate at this time.'],
+      score: 0,
+      verdict: 'Poor',
+      strengths: [],
+      improvements: ['AI evaluation is temporarily unavailable. Your answer was recorded.'],
       missedPoints: [],
       modelAnswer: 'Evaluation unavailable.',
-      feedback: 'Your answer was recorded. Please review key concepts and try again.'
+      feedback: 'We could not evaluate your answer right now. It has been recorded for later review.'
     };
   }
 };
