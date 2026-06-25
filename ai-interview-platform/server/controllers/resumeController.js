@@ -61,8 +61,10 @@ exports.uploadResume = async (req, res) => {
       parseSource = 'local';
     }
 
-    // Step 3: Save file to disk
-    const uploadDir = path.join(__dirname, '../../uploads');
+    // Step 3: Save file to disk (use /tmp in serverless environments like Vercel)
+    const uploadDir = process.env.VERCEL
+      ? '/tmp'
+      : path.join(__dirname, '../../uploads');
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     const tempFileName = `${Date.now()}_${originalname.replace(/\s+/g, '_')}`;
     const tempFilePath = path.join(uploadDir, tempFileName);
