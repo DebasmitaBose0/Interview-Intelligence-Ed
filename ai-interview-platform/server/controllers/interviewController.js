@@ -138,6 +138,19 @@ exports.evaluateCode = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please specify role, code submission, and language' });
     }
 
+    // Input safety and guard constraints
+    const allowedRoles = ['Frontend Engineer', 'Backend Engineer', 'Fullstack Engineer', 'AI / ML Engineer'];
+    const allowedLanguages = ['javascript', 'cpp', 'java', 'python'];
+    if (!allowedRoles.includes(role)) {
+      return res.status(400).json({ success: false, message: 'Invalid or unsupported role track' });
+    }
+    if (!allowedLanguages.includes(language.toLowerCase())) {
+      return res.status(400).json({ success: false, message: 'Invalid or unsupported coding language' });
+    }
+    if (code.length > 30000) {
+      return res.status(400).json({ success: false, message: 'Code size limit exceeded (maximum 30KB)' });
+    }
+
     console.log(`[Code Evaluator] Executing ${language} code for exact output...`);
     
     let compilerOutput = '';
