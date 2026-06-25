@@ -3,7 +3,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://camsense-backend.onrender.com/api/:path*"
+      "destination": "https://interview-intelligence-e84e.onrender.com/api/:path*"
     },
     {
       "source": "/((?!api/).*)",
