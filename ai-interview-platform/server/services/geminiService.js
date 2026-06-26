@@ -1,5 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { sanitizeAndParseJson } = require('../utils/jsonSanitizer');
+const { llmCache } = require('../utils/cacheManager');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -36,6 +36,14 @@ const callGeminiWithRetry = async (model, promptContent, maxRetries = 3) => {
  * Uses Gemini to extract skills, education, experience and projects from raw resume text.
  */
 const extractResumeData = async (resumeText) => {
+  const crypto = require('crypto');
+  const cacheKey = `resume_${crypto.createHash('md5').update(resumeText).digest('hex')}`;
+  const cached = llmCache.get(cacheKey);
+  if (cached) {
+    console.log('[Cache] Returning cached structured resume profile.');
+    return cached;
+  }
+
   console.log('[Gemini] Extracting structured profile from resume text...');
   const model = getModel();
 
@@ -68,8 +76,9 @@ Rules:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = sanitizeAndParseJson(result.response.text(), { skills: [], education: [], experience: [], projects: [], summary: '' });
+  const data = JSON.parse(result.response.text());
   console.log(`[Gemini] Extracted ${data.skills?.length || 0} skills from resume.`);
+  llmCache.set(cacheKey, data);
   return data;
 };
 
@@ -78,6 +87,15 @@ Rules:
  * Uses Gemini to compare resume skills against JD requirements.
  */
 const analyzeSkillsWithGemini = async (resumeText, jobDescription) => {
+  const crypto = require('crypto');
+  const hashVal = `${resumeText}_${jobDescription}`;
+  const cacheKey = `jd_${crypto.createHash('md5').update(hashVal).digest('hex')}`;
+  const cached = llmCache.get(cacheKey);
+  if (cached) {
+    console.log('[Cache] Returning cached JD skill matching report.');
+    return cached;
+  }
+
   console.log('[Gemini] Analyzing JD match against resume...');
   const model = getModel();
 
@@ -116,11 +134,13 @@ Respond ONLY with a valid raw JSON object:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = sanitizeAndParseJson(result.response.text(), { matchPercentage: 30, jdSkills: [], matchingSkills: [], missingSkills: [], recommendation: '' });
+  const data = JSON.parse(result.response.text());
   data.matchPercentage = Math.min(Math.max(Number(data.matchPercentage) || 20, 10), 100);
 
   console.log(`[Gemini] JD match: ${data.matchPercentage}%, ${data.matchingSkills?.length} matching, ${data.missingSkills?.length} missing.`);
-  return { success: true, source: 'gemini-2.5-flash', ...data };
+  const outputData = { success: true, source: 'gemini-2.5-flash', ...data };
+  llmCache.set(cacheKey, outputData);
+  return outputData;
 };
 
 /**
@@ -207,7 +227,7 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const data = sanitizeAndParseJson(result.response.text(), { technical: [], hr: [], coding: [] });
+    const data = JSON.parse(result.response.text());
     console.log(`[Gemini] Generated ${(data.technical?.length || 0) + (data.hr?.length || 0) + (data.coding?.length || 0)} personalised questions.`);
     return data;
   } catch (err) {
@@ -321,7 +341,7 @@ CRITICAL RULES:
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const data = sanitizeAndParseJson(result.response.text(), { score: 0, verdict: 'Average', strengths: [], improvements: [], missedPoints: [], modelAnswer: '', feedback: '' });
+    const data = JSON.parse(result.response.text());
     const parsedScore = Number(data.score);
     data.score = Math.min(Math.max(Number.isFinite(parsedScore) ? parsedScore : 0, 0), 10);
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
@@ -389,7 +409,7 @@ Respond ONLY with a valid raw JSON object:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = sanitizeAndParseJson(result.response.text(), { overallScore: 50, technicalScore: 50, communicationScore: 50, hrScore: 50, strengths: [], weaknesses: [], breakdown: {}, hiringRecommendation: 'Maybe', feedbackReport: '' });
+  const data = JSON.parse(result.response.text());
   // Clamp all scores
   data.overallScore = Math.min(Math.max(Number(data.overallScore) || 60, 10), 100);
   data.technicalScore = Math.min(Math.max(Number(data.technicalScore) || 60, 10), 100);
@@ -479,7 +499,12 @@ ${pistonError || 'No errors.'}
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    return sanitizeAndParseJson(result.response.text(), { containsSyntaxIssues: false, overallScore: 50, metrics: {}, testCases: [] });
+    let rawText = result.response.text().trim();
+    if (rawText.startsWith('\`\`\`json')) rawText = rawText.substring(7);
+    if (rawText.startsWith('\`\`\`')) rawText = rawText.substring(3);
+    if (rawText.endsWith('\`\`\`')) rawText = rawText.substring(0, rawText.length - 3);
+
+    return JSON.parse(rawText.trim());
   } catch (error) {
     console.error('[Gemini] Code evaluation failed:', error);
     // Safe fallback if Gemini fails

@@ -177,12 +177,18 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     rec.interimResults = true;
     rec.lang = 'en-US';
     rec.onstart = () => { setIsRecording(true); setSystemAlert('Listening…'); };
+    let debounceTimer;
     rec.onresult = e => {
       let final = '';
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) final += e.results[i][0].transcript + ' ';
       }
-      if (final) setUserTranscript(prev => prev + final);
+      if (final) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          setUserTranscript(prev => prev + final);
+        }, 250);
+      }
     };
     rec.onerror = e => { if (e.error === 'not-allowed') simulateFallback(); };
     rec.onend = () => setIsRecording(false);
