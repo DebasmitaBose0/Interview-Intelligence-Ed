@@ -339,3 +339,21 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
   }
 };
 
+// @desc    Log proctored session telemetry event
+// @route   POST /api/interview/telemetry
+// @access  Private
+exports.logTelemetry = async (req, res) => {
+  try {
+    const { interviewId, timestamp, eventType, description } = req.body;
+    console.log(`[Telemetry Log] Session: ${interviewId || 'unknown'}, Event: ${eventType} - ${description} at ${timestamp}`);
+    res.json({
+      success: true,
+      message: 'Telemetry log received statelessly'
+    });
+  } catch (error) {
+    console.error('Telemetry Log Error:', error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
