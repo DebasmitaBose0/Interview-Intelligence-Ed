@@ -4,7 +4,7 @@ This document outlines the API endpoints, payload formats, authentication rules,
 
 ## 🔐 Authentication & Security
 
-All requests to protected routes must include a Firebase ID Token in the `Authorization` header:
+The API runs in a fully stateless configuration. Rather than persisting active sessions in a centralized database, all requests verify the candidate's identity via Firebase token decoding on every endpoint. Protected routes must include a Firebase ID Token in the `Authorization` header:
 
 ```http
 Authorization: Bearer <firebase_id_token>

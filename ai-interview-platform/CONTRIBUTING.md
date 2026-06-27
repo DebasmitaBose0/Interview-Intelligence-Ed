@@ -27,17 +27,17 @@ Here is the list of major improvements needed in the codebase. Please feel free 
 ### 3. 🚨 Unhandled JSON Parsing Crashes
 *   **File:** [`server/services/geminiService.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/services/geminiService.js)
 *   **The Issue:** The LLM services call `JSON.parse(result.response.text())` directly in several paths (e.g., `extractResumeData`, `analyzeSkillsWithGemini`, `generateQuestionsFromResume`, `evaluateAnswer`). If the Gemini API returns markdown formatting wraps (like ` ```json ... ``` `) or malformed JSON, the server crashes with a 500 error on the frontend.
-*   **The Fix:** Wrap parsing blocks in a helper function that sanitizes markdown blocks (similar to the regex cleaning in `evaluateCodingSolution`) and utilizes a try-catch block to supply a schema-valid fallback structure instead of throwing.
+*   **The Fix:** Wrap parsing blocks in a helper function located in `server/utils/sanitizers/jsonSanitizer.js` that sanitizes markdown blocks and utilizes a try-catch block to supply a schema-valid fallback structure instead of throwing.
 
 ### 4. 🔗 Utility Mismatch & Import Bug
 *   **File:** [`server/controllers/resumeController.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/controllers/resumeController.js)
 *   **The Issue:** The controller imports `extractTextFromBuffer` on line 2, which does not exist in `pdfParser.js` (which actually exports `extractTextFromPDF`). Consequently, the controller requires `pdf-parse` again locally to process buffers, causing code duplication and bypassing the regex ASCII fallback logic implemented in `pdfParser.js`.
-*   **The Fix:** Change the import on line 2 to match the exported helper `extractTextFromPDF` and refactor the controller's PDF handling to utilize the utility.
+*   **The Fix:** Change the import on line 2 to match the exported helper `extractTextFromPDF` and refactor the controller's PDF handling to utilize the utility, importing the local parser fallback from `server/utils/parsers/resumeParser.js`.
 
 ### 5. 🛑 Missing Global Error-Handling Middleware
 *   **File:** [`server/app.js`](file:///c:/Users/SOUMADEEP/OneDrive/Desktop/Education/ai-interview-platform/server/app.js)
 *   **The Issue:** The Express application registers routes but fails to define a final error-catching middleware `(err, req, res, next) => { ... }`. When an unhandled error occurs, Node/Express returns a default HTML stack trace to the user, exposing folders, internal library structures, and system configurations.
-*   **The Fix:** Append a centralized global error-handler middleware to the end of the middleware chain in `app.js` to return standardized JSON error bodies:
+*   **The Fix:** Append a centralized global error-handler middleware `server/middleware/error/errorHandler.js` to the end of the middleware chain in `app.js` to return standardized JSON error bodies:
     ```javascript
     app.use((err, req, res, next) => {
       res.status(err.status || 500).json({ success: false, message: err.message || 'Internal Server Error' });
