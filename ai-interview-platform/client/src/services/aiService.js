@@ -1,4 +1,4 @@
-import API from './api';
+import API from './api/apiClient';
 
 export const startSession = async (params) => {
   const response = await API.post('/interview/session/start', params);
