@@ -1,16 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import Sidebar from './components/Navbar/Sidebar';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home';
-import InterviewSetup from './pages/InterviewSetup';
-import InterviewSession from './pages/InterviewSession';
-import CodingTest from './pages/CodingTest';
-import Result from './pages/Result';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
-import Dashboard from './pages/Dashboard';
 import { Loader2 } from 'lucide-react';
+
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
+const InterviewSession = lazy(() => import('./pages/InterviewSession'));
+const CodingTest = lazy(() => import('./pages/CodingTest'));
+const Result = lazy(() => import('./pages/Result'));
+
+function LoadingScreen({ message = 'Loading workspace...' }) {
+  return (
+    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+      <Loader2 size={24} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
+      <p style={{ fontSize: '13px', color: '#555' }}>{message}</p>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+}
 
 export default function App() {
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
@@ -87,7 +98,9 @@ export default function App() {
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {!isAuthPage && <Navbar />}
         <main style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
-          {renderContent()}
+          <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
+            {renderContent()}
+          </Suspense>
         </main>
       </div>
     </div>
