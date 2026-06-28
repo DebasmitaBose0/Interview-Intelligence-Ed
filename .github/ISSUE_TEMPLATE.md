@@ -3,6 +3,10 @@
 ## Description
 A clear and concise description of what the bug is.
 
+### Program Compliance Tracking
+- [ ] This issue is submitted as part of **ELUSoC 2026**
+- [ ] I have verified this is not a duplicate issue
+
 ## Steps to Reproduce
 1. Go to '...'
 2. Click on '....'
