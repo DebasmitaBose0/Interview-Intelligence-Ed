@@ -1,6 +1,5 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { llmCache } = require('../utils/cacheManager');
-const { sanitizeAndParseJson } = require('../utils/sanitizers/jsonSanitizer');
+const { llmCache } = require('../services/cache/cacheManager');
 
 const getModel = () => {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -77,7 +76,7 @@ Rules:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = sanitizeAndParseJson(result.response.text(), { skills: [], education: [], experience: [], projects: [], summary: '' });
+  const data = JSON.parse(result.response.text());
   console.log(`[Gemini] Extracted ${data.skills?.length || 0} skills from resume.`);
   llmCache.set(cacheKey, data);
   return data;
@@ -135,7 +134,7 @@ Respond ONLY with a valid raw JSON object:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = sanitizeAndParseJson(result.response.text(), { matchPercentage: 20, jdSkills: [], matchingSkills: [], missingSkills: [], recommendation: '' });
+  const data = JSON.parse(result.response.text());
   data.matchPercentage = Math.min(Math.max(Number(data.matchPercentage) || 20, 10), 100);
 
   console.log(`[Gemini] JD match: ${data.matchPercentage}%, ${data.matchingSkills?.length} matching, ${data.missingSkills?.length} missing.`);
@@ -228,7 +227,7 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const data = sanitizeAndParseJson(result.response.text(), { technical: [], hr: [], coding: [] });
+    const data = JSON.parse(result.response.text());
     console.log(`[Gemini] Generated ${(data.technical?.length || 0) + (data.hr?.length || 0) + (data.coding?.length || 0)} personalised questions.`);
     return data;
   } catch (err) {
@@ -342,7 +341,7 @@ CRITICAL RULES:
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    const data = sanitizeAndParseJson(result.response.text(), { score: 0, verdict: 'Poor', strengths: [], improvements: [], missedPoints: [], modelAnswer: '', feedback: '' });
+    const data = JSON.parse(result.response.text());
     const parsedScore = Number(data.score);
     data.score = Math.min(Math.max(Number.isFinite(parsedScore) ? parsedScore : 0, 0), 10);
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
@@ -410,7 +409,7 @@ Respond ONLY with a valid raw JSON object:
     contents: [{ role: 'user', parts: [{ text: prompt }] }]
   });
 
-  const data = sanitizeAndParseJson(result.response.text(), { overallScore: 50, technicalScore: 50, communicationScore: 50, hrScore: 50, strengths: [], weaknesses: [], breakdown: {}, hiringRecommendation: 'Maybe', feedbackReport: '' });
+  const data = JSON.parse(result.response.text());
   // Clamp all scores
   data.overallScore = Math.min(Math.max(Number(data.overallScore) || 60, 10), 100);
   data.technicalScore = Math.min(Math.max(Number(data.technicalScore) || 60, 10), 100);
@@ -500,7 +499,12 @@ ${pistonError || 'No errors.'}
       contents: [{ role: 'user', parts: [{ text: prompt }] }]
     });
 
-    return sanitizeAndParseJson(result.response.text(), { containsSyntaxIssues: false, overallScore: 50, metrics: {}, testCases: [] });
+    let rawText = result.response.text().trim();
+    if (rawText.startsWith('\`\`\`json')) rawText = rawText.substring(7);
+    if (rawText.startsWith('\`\`\`')) rawText = rawText.substring(3);
+    if (rawText.endsWith('\`\`\`')) rawText = rawText.substring(0, rawText.length - 3);
+
+    return JSON.parse(rawText.trim());
   } catch (error) {
     console.error('[Gemini] Code evaluation failed:', error);
     // Safe fallback if Gemini fails
