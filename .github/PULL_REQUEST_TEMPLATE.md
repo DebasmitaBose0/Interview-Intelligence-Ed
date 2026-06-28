@@ -3,6 +3,10 @@
 ## 🛠️ Related Issue
 Closes #
 
+### Program Compliance Checklist
+- [ ] This PR corresponds to a unique, non-duplicate issue in **ELUSoC 2026**
+- [ ] I have verified branch isolation rules (no unrelated files modified)
+
 ## 📝 Description
 Provide a concise description of the changes introduced by this pull request. Explain the problem being solved and the architectural/design decisions made.
 
