@@ -27,8 +27,13 @@ const upload = multer({
   }
 });
 
+const resumeUploadFields = upload.fields([
+  { name: 'resume', maxCount: 1 },
+  { name: 'file', maxCount: 1 },
+]);
+
 // Secured Endpoints
-router.post('/upload', protect, upload.single('file'), uploadResume);
+router.post('/upload', protect, resumeUploadFields, uploadResume);
 router.get('/me', protect, getResume);
 router.post('/analyze-jd', protect, analyzeJobDescription);
 

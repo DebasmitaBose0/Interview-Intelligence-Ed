@@ -12,11 +12,13 @@ const fs = require('fs');
  */
 exports.uploadResume = async (req, res) => {
   try {
-    if (!req.file) {
+    const uploadedFile = req.file || req.files?.resume?.[0] || req.files?.file?.[0];
+
+    if (!uploadedFile) {
       return res.status(400).json({ success: false, message: 'Please provide a PDF or DOCX resume file.' });
     }
 
-    const { originalname, buffer, mimetype } = req.file;
+    const { originalname, buffer, mimetype } = uploadedFile;
     console.log(`[Resume Upload] Received: ${originalname} (${mimetype})`);
 
     // Step 1: Extract raw text from PDF or DOCX using the shared utility
