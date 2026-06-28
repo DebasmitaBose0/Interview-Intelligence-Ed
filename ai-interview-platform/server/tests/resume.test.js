@@ -32,6 +32,10 @@ jest.mock('../services/geminiService', () => ({
   })
 }));
 
+jest.mock('../utils/pdfParser', () => ({
+  extractTextFromPDF: jest.fn().mockResolvedValue('React developer resume with JavaScript experience and project delivery across frontend systems.')
+}));
+
 app.use(express.json());
 app.use('/api/resume', resumeRoutes);
 
@@ -42,6 +46,32 @@ describe('Resume Endpoints', () => {
 
     expect(res.status).toBe(400);
     expect(res.body.success).toBe(false);
+  });
+
+  it('should accept the documented resume upload field', async () => {
+    const res = await request(app)
+      .post('/api/resume/upload')
+      .attach('resume', Buffer.from('%PDF-1.4 mocked resume'), {
+        filename: 'candidate.pdf',
+        contentType: 'application/pdf'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.fileName).toBe('candidate.pdf');
+  });
+
+  it('should continue accepting the legacy file upload field', async () => {
+    const res = await request(app)
+      .post('/api/resume/upload')
+      .attach('file', Buffer.from('%PDF-1.4 mocked resume'), {
+        filename: 'legacy.pdf',
+        contentType: 'application/pdf'
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.data.fileName).toBe('legacy.pdf');
   });
 
   it('should analyze job descriptions against resume', async () => {

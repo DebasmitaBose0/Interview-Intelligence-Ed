@@ -114,7 +114,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     setErrorMessage('');
     setMatchData(null);
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('resume', file);
     const token = localStorage.getItem('camsense_token');
     try {
       const interval = setInterval(() => {
