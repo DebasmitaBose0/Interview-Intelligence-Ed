@@ -6,6 +6,8 @@ const reportRoutes = require('./routes/reportRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
 
+const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
+
 const app = express();
 
 app.use(requestLogger);
@@ -21,5 +23,9 @@ app.use('/api/resume', resumeRoutes);
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');
 });
+
+// Register global error routing bounds
+app.use(notFoundHandler);
+app.use(globalErrorHandler);
 
 module.exports = app;
