@@ -141,3 +141,5 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
     </div>
   );
 }
+
+// Video telemetry monitoring enabled
