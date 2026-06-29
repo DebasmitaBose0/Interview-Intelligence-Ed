@@ -1,3 +1,4 @@
+const cache = require('./cache/localCache');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const { llmCache } = require('../services/cache/cacheManager');
 

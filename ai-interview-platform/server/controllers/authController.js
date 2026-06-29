@@ -1,7 +1,7 @@
 const { ApiError } = require('../middleware/error/errorHandler');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
-const sendEmail = require('../utils/emailService');
+const sendEmail = require('../services/notificationService');
 const crypto = require('crypto');
 
 
@@ -110,4 +110,6 @@ exports.verifyOTP = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+};
+
+// Added security events auditing

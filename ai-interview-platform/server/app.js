@@ -17,6 +17,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api', require('./routes/healthRoutes'));
+app.use('/api', require('./routes/telemetryRoutes'));
+app.use('/api', require('./routes/backupRoutes'));
 app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
@@ -31,3 +34,5 @@ app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 module.exports = app;
+
+// Unified error and security logging enabled

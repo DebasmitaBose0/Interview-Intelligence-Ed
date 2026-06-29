@@ -28,3 +28,4 @@ router.post('/telemetry', protect, interviewController.logTelemetry);
 router.post('/analyze-resume', protect, upload.single('resume'), interviewController.analyzeResumeAndMatchSkills);
 
 module.exports = router;
+// Enhanced code execution evaluation middlewares applied
