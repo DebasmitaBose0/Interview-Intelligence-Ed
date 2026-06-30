@@ -9,6 +9,8 @@ const requestLogger = require('./middleware/logging/requestLogger');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
 
+const adminRoutes = require('./routes/adminRoutes');
+
 const app = express();
 
 // Load security middlewares, including route-level request rate limiters
@@ -22,6 +24,7 @@ app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');
