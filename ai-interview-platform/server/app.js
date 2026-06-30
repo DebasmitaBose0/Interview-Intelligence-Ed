@@ -11,6 +11,7 @@ const { globalErrorHandler, notFoundHandler } = require('./middleware/error/erro
 
 const app = express();
 
+// Load security middlewares, including route-level request rate limiters
 app.use(requestLogger);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
