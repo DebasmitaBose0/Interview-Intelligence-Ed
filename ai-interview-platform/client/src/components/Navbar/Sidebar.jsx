@@ -23,7 +23,7 @@ const S = {
 };
 
 export default function Sidebar({ currentTab, setCurrentTab, user, globalState = {}, onLogout }) {
-  const isSetupDone = !!globalState.role;
+  const isSetupDone = !!globalState.role && !!globalState.resumeUploaded;
   const isSessionDone = globalState.userAnswers && globalState.userAnswers.length > 0;
   const isCodingDone = !!globalState.finalCode;
 
