@@ -1,7 +1,7 @@
 const { ApiError } = require('../middleware/error/errorHandler');
 const User = require('../models/User');
 const OTP = require('../models/OTP');
-const sendEmail = require('../utils/emailService');
+const notificationService = require('../services/notificationService');
 const crypto = require('crypto');
 
 
@@ -64,8 +64,8 @@ exports.forgotPassword = async (req, res, next) => {
     const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
 
     try {
-      await sendEmail({
-        email: user.email,
+      await notificationService.send({
+        to: user.email,
         subject: 'Password Reset OTP',
         message
       });

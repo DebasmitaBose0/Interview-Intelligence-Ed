@@ -20,6 +20,7 @@ const sendEmail = async (options) => {
   };
 
   // Send email
+  console.log(`[SMTP Transporter] Attempting delivery to: ${options.email}`);
   await transporter.sendMail(mailOptions);
 };
 
