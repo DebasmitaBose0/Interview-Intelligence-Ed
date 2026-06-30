@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Video, VideoOff, Square, Play, Download, AlertCircle } from 'lucide-react';
+import CameraFallbackOverlay from './CameraFallbackOverlay';
 
 export default function VideoRecorder({ onRecordingComplete, isSessionActive }) {
   const [permission, setPermission] = useState(false);
@@ -8,6 +9,7 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [videoChunks, setVideoChunks] = useState([]);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const liveVideoRef = useRef(null);
 
   useEffect(() => {
@@ -21,6 +23,7 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
   }, [isSessionActive]);
 
   const getCameraPermission = async () => {
+    setErrorMessage('');
     try {
       const combinedStream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
@@ -34,6 +37,11 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
     } catch (err) {
       console.error('Error getting media devices permissions:', err);
       setPermission(false);
+      setErrorMessage(
+        err.name === 'NotAllowedError'
+          ? 'Browser site permissions are blocked. Please reset site permissions in your URL bar.'
+          : 'No camera hardware found on this device. Please connect a webcam.'
+      );
     }
   };
 
@@ -91,6 +99,8 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
       <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: '8px', overflow: 'hidden', background: '#0a0a0a', border: '1px solid #222' }}>
         {permission && stream ? (
           <video ref={liveVideoRef} autoPlay playsInline muted style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ) : errorMessage ? (
+          <CameraFallbackOverlay message={errorMessage} />
         ) : (
           <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
             <VideoOff size={24} color="#555" />
