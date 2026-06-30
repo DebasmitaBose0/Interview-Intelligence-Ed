@@ -28,7 +28,14 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [parsedProfile, setParsedProfile] = useState(null);
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+<<<<<<< HEAD
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+=======
+  const [useCustomQuestions, setUseCustomQuestions] = useState(false);
+  const [customQuestionsText, setCustomQuestionsText] = useState('');
+
+  const updateDraft = (patch) => setDraft(prev => ({ ...prev, ...patch }));
+>>>>>>> feat-custom-interview-questions
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -154,20 +161,20 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   };
 
   const buildSessionState = (overrides = {}) => ({
-      role,
-      experience,
-      resumeUploaded,
-      resumeName,
-      jobDescription: jobDescription || 'Standard Developer profile',
-      difficulty,
-      matchPercentage: matchData ? matchData.matchPercentage : 0,
-      resumeSkills: parsedProfile?.skills || [],
-      resumeEducation: parsedProfile?.education || [],
-      resumeProjects: parsedProfile?.projects || [],
-      resumeExperience: parsedProfile?.experience || [],
-      resumeSummary: parsedProfile?.summary || '',
-      resumeText: parsedProfile?.extractedText || '',
-      ...overrides,
+    role,
+    experience,
+    resumeUploaded,
+    resumeName,
+    jobDescription: jobDescription || 'Standard Developer profile',
+    difficulty,
+    matchPercentage: matchData ? matchData.matchPercentage : 0,
+    resumeSkills: parsedProfile?.skills || [],
+    resumeEducation: parsedProfile?.education || [],
+    resumeProjects: parsedProfile?.projects || [],
+    resumeExperience: parsedProfile?.experience || [],
+    resumeSummary: parsedProfile?.summary || '',
+    resumeText: parsedProfile?.extractedText || '',
+    ...overrides,
   });
 
   const handleStartInterview = async () => {
@@ -177,25 +184,32 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
     }
     setIsStartingInterview(true);
     setErrorMessage('');
-    const sessionState = buildSessionState();
 
     try {
       const token = localStorage.getItem('camsense_token') || 'demo_token_active';
       const response = await fetch('/api/interview/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(sessionState),
+        body: JSON.stringify(buildSessionState()),
       });
       const json = await response.json();
       if (!response.ok || !json.success) {
         throw new Error(json.message || 'Unable to initialize interview session.');
       }
 
+      let questionsList = null;
+      if (useCustomQuestions && customQuestionsText.trim()) {
+        questionsList = customQuestionsText.split('\n')
+          .map(q => q.trim())
+          .filter(q => q.length > 0)
+          .map(q => ({ questionText: q, category: 'custom', candidateAnswer: '' }));
+      }
+
       setGlobalState(prev => ({
         ...prev,
         ...buildSessionState({
           interviewId: json.data?._id,
-          questions: Array.isArray(json.data?.questions) ? json.data.questions : [],
+          questions: questionsList || (Array.isArray(json.data?.questions) ? json.data.questions : []),
         }),
       }));
       setCurrentTab('session');
@@ -293,6 +307,33 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Custom Questions Toggle & Input */}
+          <div style={S.card}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Mock Questions</label>
+              <input
+                type="checkbox"
+                checked={useCustomQuestions}
+                onChange={e => setUseCustomQuestions(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+            </div>
+            {useCustomQuestions && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <textarea
+                  value={customQuestionsText}
+                  onChange={e => setCustomQuestionsText(e.target.value)}
+                  placeholder="Enter custom questions here (one question per line)..."
+                  rows={4}
+                  style={S.inpTextarea}
+                />
+                <span style={{ fontSize: '11px', color: '#888' }}>
+                  If enabled, these questions will be used for your mock interview session instead of generating them from your resume.
+                </span>
+              </div>
+            )}
           </div>
 
         </div>
