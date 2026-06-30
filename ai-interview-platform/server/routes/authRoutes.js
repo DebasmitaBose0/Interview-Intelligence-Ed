@@ -6,8 +6,8 @@ const rateLimiter = require('../middleware/rateLimiter');
 
 const otpLimiter = rateLimiter(3, 15 * 60 * 1000); // Max 3 requests per 15 minutes
 
-// Stateless authentication endpoints mapping user JWT claims decoded from Firebase tokens.
-// No session cookies or database lookups are performed at this level.
+// Stateless authentication endpoints mapping user JWT claims.
+// Leverages the unified notification dispatch service for transactional recovery codes.
 router.get('/me', protect, authController.getMe);
 router.post('/logout', protect, authController.logout);
 
