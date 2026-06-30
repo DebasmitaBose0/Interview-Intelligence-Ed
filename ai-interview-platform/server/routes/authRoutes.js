@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { protect } = require('../middleware/authMiddleware');
+const auditLogger = require('../middleware/auditLogger');
+
+router.use(auditLogger);
 
 // Stateless authentication endpoints mapping user JWT claims decoded from Firebase tokens.
 // No session cookies or database lookups are performed at this level.

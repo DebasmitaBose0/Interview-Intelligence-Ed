@@ -13,9 +13,12 @@ if (!admin.apps.length) {
 
 const app = require('./app');
 const PORT = process.env.PORT || 5000;
+const logger = require('./utils/logger');
 
 app.listen(PORT, () => {
   console.log(`✔ Stateless API server listening gracefully on port ${PORT}`);
-  console.log(`[Diagnostic] Node.js Version: ${process.version}`);
-  console.log(`[Diagnostic] Platform: ${process.platform}`);
+  logger.info(`Stateless API server started on port ${PORT}`, {
+    nodeVersion: process.version,
+    platform: process.platform
+  });
 });

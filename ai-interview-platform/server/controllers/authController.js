@@ -3,6 +3,7 @@ const User = require('../models/User');
 const OTP = require('../models/OTP');
 const sendEmail = require('../utils/emailService');
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 
 
 // @desc    Get current user details statelessly
@@ -71,8 +72,10 @@ exports.forgotPassword = async (req, res, next) => {
       });
 
       res.status(200).json({ success: true, data: 'Email sent' });
+      logger.security('Password reset OTP generated successfully', { email });
     } catch (err) {
       await OTP.deleteMany({ email });
+      logger.error('Failed to dispatch password reset OTP email', { email, error: err.message });
       return next(new ApiError(500, 'Email could not be sent'));
     }
   } catch (error) {
@@ -103,11 +106,14 @@ exports.verifyOTP = async (req, res, next) => {
 
     await OTP.deleteMany({ email }); // Delete OTPs for this email after success
 
+    logger.security('Password reset completed successfully via OTP verification', { email });
+
     res.status(200).json({
       success: true,
       message: 'Password reset successful',
     });
   } catch (error) {
+    logger.warn('Failed OTP verification attempt', { email, error: error.message });
     next(error);
   }
 };
