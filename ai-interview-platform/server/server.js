@@ -9,6 +9,7 @@ if (!admin.apps.length) {
     projectId: 'aiinterview-a3d81'
   });
   console.log('✔ Firebase Admin initialized statelessly.');
+  console.log('✔ LLM Database Cache Layer activated.');
 }
 
 const app = require('./app');
