@@ -4,6 +4,9 @@ const OTP = require('../models/OTP');
 const sendEmail = require('../utils/emailService');
 const crypto = require('crypto');
 
+// Authentication Controller
+// Endpoints are protected by express-rate-limit bounds to prevent SMTP resource exhaustion.
+
 
 // @desc    Get current user details statelessly
 // @route   GET /api/auth/me
