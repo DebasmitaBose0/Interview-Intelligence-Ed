@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useSetupDraft } from '../hooks/useSetupDraft';
+import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -33,6 +34,8 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
 
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [useCustomQuestions, setUseCustomQuestions] = useState(false);
+  const [customQuestionsText, setCustomQuestionsText] = useState('');
 
   const updateDraft = (patch) => setDraft(prev => ({ ...prev, ...patch }));
 
@@ -161,6 +164,14 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       return;
     }
 
+    let questionsList = null;
+    if (useCustomQuestions && customQuestionsText.trim()) {
+      questionsList = customQuestionsText.split('\n')
+        .map(q => q.trim())
+        .filter(q => q.length > 0)
+        .map(q => ({ questionText: q, category: 'custom', candidateAnswer: '' }));
+    }
+
     setGlobalState(prev => ({
       ...prev,
       role,
@@ -176,6 +187,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
       resumeSummary: parsedProfile.summary || '',
       resumeText: parsedProfile.extractedText || '',
       matchPercentage: matchData ? matchData.matchPercentage : 0,
+      questions: questionsList
     }));
     setCurrentTab('session');
   };
@@ -274,6 +286,31 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Custom Questions Toggle & Input */}
+          <div style={S.card}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Practice Mode</label>
+              <input
+                type="checkbox"
+                checked={useCustomQuestions}
+                onChange={e => setUseCustomQuestions(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+            </div>
+            {useCustomQuestions && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <QuestionInputCard
+                  value={customQuestionsText}
+                  onChange={setCustomQuestionsText}
+                  placeholder="Paste your specific practice questions here (one per line)..."
+                />
+                <span style={{ fontSize: '11px', color: '#888' }}>
+                  If enabled, these questions will bypass standard resume-based generative AI questions.
+                </span>
+              </div>
+            )}
           </div>
 
         </div>

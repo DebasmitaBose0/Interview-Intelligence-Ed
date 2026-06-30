@@ -21,6 +21,7 @@ router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
 router.post('/coding/eval', protect, interviewController.evaluateCode);
+// Handler route for logging telemetry diagnostic results
 router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);
 router.post('/telemetry', protect, interviewController.logTelemetry);
 
