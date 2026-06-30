@@ -3,6 +3,8 @@ const User = require('../models/User');
 const OTP = require('../models/OTP');
 const sendEmail = require('../utils/emailService');
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
+const RefreshToken = require('../models/RefreshToken');
 
 
 // @desc    Get current user details statelessly
@@ -110,4 +112,43 @@ exports.verifyOTP = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+};
+
+// @desc    Refresh access token using rotate-on-consume refresh token
+// @route   POST /api/auth/refresh
+// @access  Public
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return next(new ApiError(400, 'Refresh token is required'));
+    }
+
+    const activeToken = await RefreshToken.findOne({ token, revoked: false });
+    if (!activeToken || activeToken.expiresAt < new Date()) {
+      return next(new ApiError(403, 'Invalid or expired refresh token'));
+    }
+
+    // Mark current refresh token as revoked (rotation)
+    activeToken.revoked = true;
+    await activeToken.save();
+
+    const newAccessToken = jwt.sign({ id: activeToken.userId }, process.env.JWT_SECRET || 'fallback_secret_key', { expiresIn: '15m' });
+    const newRefreshTokenString = crypto.randomBytes(40).toString('hex');
+    
+    await RefreshToken.create({
+      userId: activeToken.userId,
+      token: newRefreshTokenString,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    });
+
+    res.status(200).json({
+      success: true,
+      accessToken: newAccessToken,
+      refreshToken: newRefreshTokenString
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

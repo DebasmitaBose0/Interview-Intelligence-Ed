@@ -11,6 +11,10 @@ const { globalErrorHandler, notFoundHandler } = require('./middleware/error/erro
 
 const app = express();
 
+if (!process.env.JWT_SECRET) {
+  console.warn('[Security Warning] JWT_SECRET env parameter is missing. Falling back to default keys.');
+}
+
 app.use(requestLogger);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
