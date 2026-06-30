@@ -4,6 +4,11 @@ const app = express();
 const authRoutes = require('../routes/authRoutes');
 const { sanitizeAndParseJson } = require('../utils/sanitizers/jsonSanitizer');
 
+/**
+ * Suite: Authentication Endpoints
+ * Focus: Test stateless session checks, logins, and logouts under mocked contexts.
+ */
+
 // Mock auth middleware to bypass Firebase token checks
 jest.mock('../middleware/authMiddleware', () => ({
   protect: (req, res, next) => {

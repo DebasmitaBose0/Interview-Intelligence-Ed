@@ -1,0 +1,30 @@
+name: CI/CD Quality Pipeline
+
+on:
+  push:
+    branches: [ master, feat-*, bug-* ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository Code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js Environment
+      uses: actions/setup-node@v4
+      with:
+        node-size: 20
+        cache: 'npm'
+
+    - name: Install Monorepo Dependencies
+      run: npm install
+
+    - name: Run Backend Diagnostic Tests
+      run: npm run test
+      env:
+        JWT_SECRET: test_jwt_secret_key_123
+        NODE_ENV: test
