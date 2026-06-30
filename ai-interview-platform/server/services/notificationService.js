@@ -1,14 +1,26 @@
-const emailService = require('../utils/emailService');
+const sendEmail = require('../utils/emailService');
+
 class NotificationService {
   static async sendOTP(email, otp) {
-    return await emailService.sendOTP(email, otp);
+    return await sendEmail({
+      email,
+      subject: 'Password Reset OTP',
+      message: `Your password reset OTP is ${otp}. It is valid for 5 minutes.`
+    });
   }
+
   static async sendInterviewConfirmation(email, date) {
-    return await emailService.sendMail({
-      to: email,
+    return await sendEmail({
+      email,
       subject: 'Interview Scheduled',
-      html: `<p>Your interview is scheduled for ${date}</p>`
+      message: `Your interview is scheduled for ${date}`
     });
   }
 }
-module.exports = NotificationService;
+
+// Attach static methods to the main function to support both import paradigms
+sendEmail.sendOTP = NotificationService.sendOTP;
+sendEmail.sendInterviewConfirmation = NotificationService.sendInterviewConfirmation;
+
+module.exports = sendEmail;
+
