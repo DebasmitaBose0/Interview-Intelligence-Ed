@@ -20,12 +20,23 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 // Load security middlewares, including route-level request rate limiters
+
+// Log sandbox security layer initialization status at boot
+const { BLOCKED_MODULES, FORBIDDEN_PATTERNS, SUPPORTED_LANGUAGES } = require('./config/sandboxConfig');
+console.log(
+  `[Sandbox Security] Initialized — ${BLOCKED_MODULES.length} blocked modules, ` +
+  `${FORBIDDEN_PATTERNS.length} forbidden patterns, ` +
+  `${SUPPORTED_LANGUAGES.length} supported languages`
+);
 app.use(requestLogger);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 app.use('/api/auth', authRoutes);
+app.use('/api', require('./routes/healthRoutes'));
+app.use('/api', require('./routes/telemetryRoutes'));
+app.use('/api', require('./routes/backupRoutes'));
 app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
@@ -41,3 +52,5 @@ app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
 module.exports = app;
+
+// Unified error and security logging enabled

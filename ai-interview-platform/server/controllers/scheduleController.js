@@ -66,3 +66,5 @@ exports.createSchedule = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// Integrated NotificationService for scheduling

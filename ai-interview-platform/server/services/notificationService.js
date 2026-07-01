@@ -17,4 +17,25 @@ const send = async ({ to, subject, message, channel = 'email' }) => {
   return { success: true, channel: 'console' };
 };
 
-module.exports = { send };
+const sendOTP = async (email, otp) => {
+  return await send({
+    to: email,
+    subject: 'Password Reset OTP',
+    message: `Your password reset OTP is ${otp}. It is valid for 5 minutes.`
+  });
+};
+
+const sendInterviewConfirmation = async (email, date) => {
+  return await send({
+    to: email,
+    subject: 'Interview Scheduled',
+    message: `Your interview is scheduled for ${date}`
+  });
+};
+
+module.exports = {
+  send,
+  sendOTP,
+  sendInterviewConfirmation
+};
+

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
-import { useSetupDraft } from '../hooks/useSetupDraft';
 import { useMediaDevices } from '../hooks/useMediaDevices';
 
 const S = {
@@ -31,6 +30,8 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [useCustomQuestions, setUseCustomQuestions] = useState(false);
+  const [customQuestionsText, setCustomQuestionsText] = useState('');
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },
@@ -156,57 +157,64 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   };
 
   const buildSessionState = (overrides = {}) => ({
-      role,
-      experience,
-      resumeUploaded,
-      resumeName,
-      jobDescription: jobDescription || 'Standard Developer profile',
-      difficulty,
-      matchPercentage: matchData ? matchData.matchPercentage : 0,
-      resumeSkills: parsedProfile?.skills || [],
-      resumeEducation: parsedProfile?.education || [],
-      resumeProjects: parsedProfile?.projects || [],
-      resumeExperience: parsedProfile?.experience || [],
-      resumeSummary: parsedProfile?.summary || '',
-      resumeText: parsedProfile?.extractedText || '',
-      ...overrides,
+    role,
+    experience,
+    resumeUploaded,
+    resumeName,
+    jobDescription: jobDescription || 'Standard Developer profile',
+    difficulty,
+    matchPercentage: matchData ? matchData.matchPercentage : 0,
+    resumeSkills: parsedProfile?.skills || [],
+    resumeEducation: parsedProfile?.education || [],
+    resumeProjects: parsedProfile?.projects || [],
+    resumeExperience: parsedProfile?.experience || [],
+    resumeSummary: parsedProfile?.summary || '',
+    resumeText: parsedProfile?.extractedText || '',
+    ...overrides,
   });
 
   const handleStartInterview = async () => {
+    if (!resumeUploaded) {
+      setErrorMessage('Please upload your resume before starting the interview session.');
+      return;
+    }
     setIsStartingInterview(true);
     setErrorMessage('');
-    const sessionState = buildSessionState();
 
     try {
       const token = localStorage.getItem('camsense_token') || 'demo_token_active';
       const response = await fetch('/api/interview/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(sessionState),
+        body: JSON.stringify(buildSessionState()),
       });
       const json = await response.json();
       if (!response.ok || !json.success) {
         throw new Error(json.message || 'Unable to initialize interview session.');
       }
 
+      let questionsList = null;
+      if (useCustomQuestions && customQuestionsText.trim()) {
+        questionsList = customQuestionsText.split('\n')
+          .map(q => q.trim())
+          .filter(q => q.length > 0)
+          .map(q => ({ questionText: q, category: 'custom', candidateAnswer: '' }));
+      }
+
       setGlobalState(prev => ({
         ...prev,
         ...buildSessionState({
           interviewId: json.data?._id,
-          questions: Array.isArray(json.data?.questions) ? json.data.questions : [],
+          questions: questionsList || (Array.isArray(json.data?.questions) ? json.data.questions : []),
         }),
       }));
+      setCurrentTab('session');
     } catch (err) {
       console.warn('Interview initialization fell back to offline mode:', err);
-      setErrorMessage('Interview engine is offline. Starting with built-in practice questions.');
-      setGlobalState(prev => ({
-        ...prev,
-        ...buildSessionState({ interviewId: 'demo_session_active' }),
-      }));
+      setErrorMessage(err.message || 'Interview engine is offline. Please try again.');
     } finally {
       setIsStartingInterview(false);
     }
-    setCurrentTab('session');
   };
 
   return (
@@ -295,6 +303,33 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
                 </select>
               </div>
             </div>
+          </div>
+
+          {/* Custom Questions Toggle & Input */}
+          <div style={S.card}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Mock Questions</label>
+              <input
+                type="checkbox"
+                checked={useCustomQuestions}
+                onChange={e => setUseCustomQuestions(e.target.checked)}
+                style={{ cursor: 'pointer' }}
+              />
+            </div>
+            {useCustomQuestions && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <textarea
+                  value={customQuestionsText}
+                  onChange={e => setCustomQuestionsText(e.target.value)}
+                  placeholder="Enter custom questions here (one question per line)..."
+                  rows={4}
+                  style={S.inpTextarea}
+                />
+                <span style={{ fontSize: '11px', color: '#888' }}>
+                  If enabled, these questions will be used for your mock interview session instead of generating them from your resume.
+                </span>
+              </div>
+            )}
           </div>
 
         </div>
@@ -419,9 +454,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           {/* CTA */}
           <button
             onClick={handleStartInterview}
-            disabled={isStartingInterview}
+            disabled={isStartingInterview || !resumeUploaded}
             style={{
-              width: '100%', padding: '12px 24px', background: isStartingInterview ? '#1a1a1a' : '#fff', color: isStartingInterview ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isStartingInterview ? 'not-allowed' : 'pointer',
+              width: '100%', padding: '12px 24px', background: isStartingInterview || !resumeUploaded ? '#1a1a1a' : '#fff', color: isStartingInterview || !resumeUploaded ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isStartingInterview || !resumeUploaded ? 'not-allowed' : 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: 'all 0.15s',
             }}
           >

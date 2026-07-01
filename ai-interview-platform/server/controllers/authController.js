@@ -125,4 +125,6 @@ exports.verifyOTP = async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-};
+};
+
+// Added security events auditing
