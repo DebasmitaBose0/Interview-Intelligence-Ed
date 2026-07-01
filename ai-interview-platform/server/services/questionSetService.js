@@ -7,4 +7,3 @@ exports.fetchQuestionSets = async (userId) => {
     { id: '2', title: 'System Design Scaling', questionsCount: 8 }
   ];
 };
-      

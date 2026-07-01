@@ -9,4 +9,3 @@ class CacheManager {
   set(key, val, ttl) { return this.provider.set(key, val, ttl); }
 }
 module.exports = new CacheManager();
-      

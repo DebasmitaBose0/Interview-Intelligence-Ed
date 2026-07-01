@@ -16,4 +16,3 @@ router.get('/telemetry/metrics', (req, res) => {
 });
 
 module.exports = router;
-      

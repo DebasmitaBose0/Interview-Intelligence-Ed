@@ -8,7 +8,7 @@ export default function CountdownTimer({ targetTime, onUnlock }) {
   useEffect(() => {
     const diff = Math.max(0, Math.floor((new Date(targetTime) - new Date()) / 1000));
     setSecondsLeft(diff);
-    
+
     const timer = setInterval(() => {
       setSecondsLeft(prev => {
         if (prev <= 1) {
@@ -33,4 +33,3 @@ export default function CountdownTimer({ targetTime, onUnlock }) {
     </div>
   );
 }
-      

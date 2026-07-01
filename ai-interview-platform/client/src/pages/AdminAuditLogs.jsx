@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 
 export default function AdminAuditLogs() {
   const [logs, setLogs] = useState([]);
-  
+
   useEffect(() => {
     fetch('/api/admin/audit-logs')
       .then(res => res.json())
@@ -24,4 +24,3 @@ export default function AdminAuditLogs() {
     </div>
   );
 }
-      

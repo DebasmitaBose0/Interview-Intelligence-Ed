@@ -27,4 +27,3 @@ exports.adminOnly = (req, res, next) => {
   }
   res.status(403).json({ success: false, message: 'Access denied: Administrators only' });
 };
-      

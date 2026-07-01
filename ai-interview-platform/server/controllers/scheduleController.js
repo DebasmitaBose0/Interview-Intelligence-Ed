@@ -5,4 +5,3 @@ exports.getSchedule = (req, res) => {
     scheduledAt: new Date(Date.now() + 300000).toISOString() // 5 mins from now
   });
 };
-      

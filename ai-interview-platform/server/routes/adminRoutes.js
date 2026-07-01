@@ -7,4 +7,3 @@ const { getAuditLogs } = require('../controllers/adminController');
 router.get('/admin/audit-logs', protect, adminOnly, getAuditLogs);
 
 module.exports = router;
-      

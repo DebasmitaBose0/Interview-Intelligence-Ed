@@ -9,4 +9,3 @@ describe('API Integration Smoke Tests', () => {
     expect(res.body.status).toBe('UP');
   });
 });
-      

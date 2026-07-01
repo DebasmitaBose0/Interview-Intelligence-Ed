@@ -4,7 +4,7 @@ import { Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export default function AdvancedTelemetryDashboard() {
   const [logs, setLogs] = useState([]);
-  
+
   useEffect(() => {
     fetch('/api/telemetry/metrics')
       .then(res => res.json())
@@ -35,4 +35,3 @@ export default function AdvancedTelemetryDashboard() {
     </div>
   );
 }
-      

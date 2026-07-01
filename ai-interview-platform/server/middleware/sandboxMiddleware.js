@@ -6,4 +6,3 @@ exports.validateSandboxPayload = (req, res, next) => {
   }
   next();
 };
-      

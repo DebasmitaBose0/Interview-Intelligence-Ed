@@ -8,4 +8,3 @@ exports.getAuditLogs = async (req, res) => {
     ]
   });
 };
-      

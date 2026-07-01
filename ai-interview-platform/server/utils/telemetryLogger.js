@@ -20,4 +20,3 @@ exports.logEvent = (interviewId, eventType, description, severity = 'info') => {
     'utf8'
   );
 };
-      
