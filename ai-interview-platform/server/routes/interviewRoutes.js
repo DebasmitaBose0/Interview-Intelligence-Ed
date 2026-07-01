@@ -1,4 +1,5 @@
 const express = require('express');
+const { getSchedule } = require('../controllers/scheduleController');
 const multer = require('multer');
 const router = express.Router();
 
@@ -33,3 +34,5 @@ router.post('/analyze-resume', protect, upload.single('resume'), interviewContro
 
 module.exports = router;
 // Enhanced code execution evaluation middlewares applied
+
+router.get('/schedule/:id', getSchedule);
