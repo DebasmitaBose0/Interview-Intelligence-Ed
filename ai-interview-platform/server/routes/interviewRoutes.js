@@ -21,7 +21,6 @@ router.post('/start', protect, interviewController.startInterview);
 router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
-
 // Code evaluation endpoints pass through the sandbox security layer
 // before reaching the controller. This prevents execution of code
 // containing filesystem access, process spawning, or network calls.

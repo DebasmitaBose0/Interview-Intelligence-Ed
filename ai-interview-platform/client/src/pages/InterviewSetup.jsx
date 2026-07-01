@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
+import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -308,7 +309,7 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
           {/* Custom Questions Toggle & Input */}
           <div style={S.card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <label style={{ fontSize: '12px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Mock Questions</label>
+              <label style={{ fontSize: '12px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Custom Practice Mode</label>
               <input
                 type="checkbox"
                 checked={useCustomQuestions}
@@ -318,15 +319,13 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
             </div>
             {useCustomQuestions && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                <textarea
+                <QuestionInputCard
                   value={customQuestionsText}
-                  onChange={e => setCustomQuestionsText(e.target.value)}
-                  placeholder="Enter custom questions here (one question per line)..."
-                  rows={4}
-                  style={S.inpTextarea}
+                  onChange={setCustomQuestionsText}
+                  placeholder="Paste your specific practice questions here (one per line)..."
                 />
                 <span style={{ fontSize: '11px', color: '#888' }}>
-                  If enabled, these questions will be used for your mock interview session instead of generating them from your resume.
+                  If enabled, these questions will bypass standard resume-based generative AI questions.
                 </span>
               </div>
             )}
