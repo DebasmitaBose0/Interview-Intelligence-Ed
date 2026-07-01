@@ -1,7 +1,7 @@
 const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
 const { getStorageAdapter } = require('../repositories/storageAdapter');
 const CustomQuestionSet = require('../models/CustomQuestionSet');
-const cacheService = require('../services/cacheService');
+const cacheManager = require('../services/cache/cacheManager');
 // Utilizing caching service strategies to optimize LLM query volumes
 
 // @desc    Initialize a new mock interview session with Gemini-generated resume-based questions
@@ -377,7 +377,8 @@ exports.analyzeResumeAndMatchSkills = async (req, res) => {
 exports.logTelemetry = async (req, res) => {
   try {
     const { interviewId, timestamp, eventType, description } = req.body;
-    console.log(`[Telemetry Log] Session: ${interviewId || 'unknown'}, Event: ${eventType} - ${description} at ${timestamp}`);
+    const { logEvent } = require('../utils/telemetryLogger');
+    logEvent(interviewId, eventType, description, eventType.includes('Violation') ? 'high' : 'info');
     res.json({
       success: true,
       message: 'Telemetry log received statelessly'

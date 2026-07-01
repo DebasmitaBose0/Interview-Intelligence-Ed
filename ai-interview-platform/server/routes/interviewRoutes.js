@@ -1,5 +1,6 @@
 const express = require('express');
 const { getReport } = require('../controllers/reportController');
+const { getSchedule } = require('../controllers/scheduleController');
 const multer = require('multer');
 const router = express.Router();
 
@@ -32,7 +33,9 @@ router.post('/telemetry', protect, interviewController.logTelemetry);
 // New Resume Analysis route matching PDF file buffers and Job Descriptions
 router.post('/analyze-resume', protect, upload.single('resume'), interviewController.analyzeResumeAndMatchSkills);
 
-module.exports = router;
 // Enhanced code execution evaluation middlewares applied
 
 router.get('/report/:id', getReport);
+router.get('/schedule/:id', getSchedule);
+
+module.exports = router;
