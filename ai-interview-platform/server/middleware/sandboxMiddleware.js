@@ -37,9 +37,19 @@ const sandboxMiddleware = (req, res, next) => {
       result.violations.map(v => v.rule).join(', ')
     );
 
+    let message = 'Code submission rejected by security sandbox.';
+    const hasUnsupportedLanguage = result.violations.some(v => v.rule === 'unsupported_language');
+    const hasCodeLengthExceeded = result.violations.some(v => v.rule === 'code_length_exceeded');
+
+    if (hasUnsupportedLanguage) {
+      message = 'Invalid or unsupported coding language';
+    } else if (hasCodeLengthExceeded) {
+      message = 'Code size limit exceeded (maximum 30KB)';
+    }
+
     return res.status(400).json({
       success: false,
-      message: 'Code submission rejected by security sandbox.',
+      message,
       violations: result.violations,
       meta: result.meta,
     });
