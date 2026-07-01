@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
+import { useMediaDevices } from '../hooks/useMediaDevices';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
@@ -28,14 +29,9 @@ export default function InterviewSetup({ setGlobalState, setCurrentTab }) {
   const [parsedProfile, setParsedProfile] = useState(null);
   const [activePreviewTab, setActivePreviewTab] = useState('skills');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-<<<<<<< HEAD
   const [isStartingInterview, setIsStartingInterview] = useState(false);
-=======
   const [useCustomQuestions, setUseCustomQuestions] = useState(false);
   const [customQuestionsText, setCustomQuestionsText] = useState('');
-
-  const updateDraft = (patch) => setDraft(prev => ({ ...prev, ...patch }));
->>>>>>> feat-custom-interview-questions
 
   const roles = [
     { name: 'Frontend Engineer', icon: Code, desc: 'React, System Architecture, UI performance' },

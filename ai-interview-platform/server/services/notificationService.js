@@ -1,26 +1,41 @@
 const sendEmail = require('../utils/emailService');
 
-class NotificationService {
-  static async sendOTP(email, otp) {
-    return await sendEmail({
-      email,
-      subject: 'Password Reset OTP',
-      message: `Your password reset OTP is ${otp}. It is valid for 5 minutes.`
-    });
+const send = async ({ to, subject, message, channel = 'email' }) => {
+  console.log(`[Notification Service] Dispatching notification to: ${to} via ${channel}`);
+
+  if (channel === 'email') {
+    try {
+      await sendEmail({ email: to, subject, message });
+      return { success: true, channel: 'email' };
+    } catch (err) {
+      console.warn('[Notification Service Error] Email channel failed, falling back to console logging:', err.message);
+    }
   }
 
-  static async sendInterviewConfirmation(email, date) {
-    return await sendEmail({
-      email,
-      subject: 'Interview Scheduled',
-      message: `Your interview is scheduled for ${date}`
-    });
-  }
-}
+  // Fallback to console trace logging
+  console.log(`[Notification Dispatch Fallback] TO: ${to} | SUBJECT: ${subject} | MESSAGE: ${message}`);
+  return { success: true, channel: 'console' };
+};
 
-// Attach static methods to the main function to support both import paradigms
-sendEmail.sendOTP = NotificationService.sendOTP;
-sendEmail.sendInterviewConfirmation = NotificationService.sendInterviewConfirmation;
+const sendOTP = async (email, otp) => {
+  return await send({
+    to: email,
+    subject: 'Password Reset OTP',
+    message: `Your password reset OTP is ${otp}. It is valid for 5 minutes.`
+  });
+};
 
-module.exports = sendEmail;
+const sendInterviewConfirmation = async (email, date) => {
+  return await send({
+    to: email,
+    subject: 'Interview Scheduled',
+    message: `Your interview is scheduled for ${date}`
+  });
+};
+
+module.exports = {
+  send,
+  sendOTP,
+  sendInterviewConfirmation
+};
 

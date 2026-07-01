@@ -8,9 +8,18 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
+const configCheck = require('./utils/configCheck');
+
+const configStatus = configCheck.check();
+if (!configStatus.valid) {
+  console.warn(`[Configuration Warning] Missing environment variables: ${configStatus.missing.join(', ')}`);
+}
+
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 
+// Load security middlewares, including route-level request rate limiters
 app.use(requestLogger);
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
@@ -24,6 +33,7 @@ app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');
