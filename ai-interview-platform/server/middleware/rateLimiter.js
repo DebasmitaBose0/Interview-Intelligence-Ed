@@ -1,5 +1,19 @@
-// In-memory rate limiting implementation for stateless lightweight tracking
+// In-memory rate limiting implementation with periodic stale entry cleanup
 const limitStore = new Map();
+const CLEANUP_INTERVAL_MS = 300000; // 5 minutes
+
+setInterval(() => {
+  const now = Date.now();
+  const windowMs = 60000; // default 1-minute window for cleanup
+  for (const [ip, timestamps] of limitStore.entries()) {
+    const recent = timestamps.filter(t => now - t < windowMs);
+    if (recent.length === 0) {
+      limitStore.delete(ip);
+    } else {
+      limitStore.set(ip, recent);
+    }
+  }
+}, CLEANUP_INTERVAL_MS).unref();
 
 const rateLimiter = (maxRequests = 60, windowMs = 60000) => {
   return (req, res, next) => {

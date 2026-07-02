@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
@@ -23,23 +24,34 @@ const rateLimiter = require('./middleware/rateLimiter');
 const app = express();
 
 if (!process.env.JWT_SECRET) {
-  console.warn('[Security Warning] JWT_SECRET env parameter is missing. Falling back to default keys.');
+  console.warn('[Security Warning] JWT_SECRET environment variable is missing. Using default signing key.');
 }
 
-// Load security middlewares, including route-level request rate limiters
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000'];
 
-// Log sandbox security layer initialization status at boot
-const { BLOCKED_MODULES, FORBIDDEN_PATTERNS, SUPPORTED_LANGUAGES } = require('./config/sandboxConfig');
-console.log(
-  `[Sandbox Security] Initialized — ${BLOCKED_MODULES.length} blocked modules, ` +
-  `${FORBIDDEN_PATTERNS.length} forbidden patterns, ` +
-  `${SUPPORTED_LANGUAGES.length} supported languages`
-);
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+// Load security middlewares, including route-level request rate limiters
+app.use(helmet());
+app.use(cors(corsOptions));
 app.use(requestLogger);
-app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(rateLimiter(100)); // Apply rate limiter to all routes (max 100 req/min)
+app.use(rateLimiter(100));
 
 app.use('/api/auth', authRoutes);
 app.use('/api', require('./routes/telemetryRoutes'));

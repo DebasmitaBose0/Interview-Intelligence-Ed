@@ -147,7 +147,11 @@ exports.refreshToken = async (req, res, next) => {
     activeToken.revoked = true;
     await activeToken.save();
 
-    const newAccessToken = jwt.sign({ id: activeToken.userId }, process.env.JWT_SECRET || 'fallback_secret_key', { expiresIn: '15m' });
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new ApiError(500, 'JWT_SECRET environment variable is not configured');
+    }
+    const newAccessToken = jwt.sign({ id: activeToken.userId }, jwtSecret, { expiresIn: '15m' });
     const newRefreshTokenString = crypto.randomBytes(40).toString('hex');
     
     await RefreshToken.create({
