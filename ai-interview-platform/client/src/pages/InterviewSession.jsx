@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
 import { STANDARD_AUDIO_CONSTRAINTS } from '../utils/audioConstraints';
-import { getAuthHeader } from '../utils/auth/authHeaders';
+import { getAuthHeader } from '../utils/authHeaders';
+import { useProctor } from '../hooks/useProctor';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
@@ -101,45 +102,27 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
     };
   }, []);
 
-  useEffect(() => {
-    if (!hasStarted || isCheatWarningVisible) return;
+  const handleViolation = useCallback(() => {
+    setIsCheatWarningVisible(true);
+    if (window.speechSynthesis) window.speechSynthesis.pause();
+    if (recognitionRef.current) recognitionRef.current.stop();
+    if (window.simInterval) clearInterval(window.simInterval);
+    setIsRecording(false);
+    setTimerActive(false);
+    const timestamp = new Date().toLocaleTimeString();
+    setGlobalState(prev => ({
+      ...prev,
+      violationCount: (prev.violationCount || 0) + 1,
+      telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }]
+    }));
+  }, []);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) handleViolation();
-    };
-
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) handleViolation();
-    };
-
-    const handleViolation = () => {
-      fetch('/api/interview/telemetry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ interviewId, eventType: 'CheatViolation', description: 'User exited fullscreen mode / blurred tab', timestamp: new Date().toISOString() })
-      }).catch(console.error);
-      setIsCheatWarningVisible(true);
-      if (window.speechSynthesis) window.speechSynthesis.pause();
-      if (recognitionRef.current) recognitionRef.current.stop();
-      if (window.simInterval) clearInterval(window.simInterval);
-      setIsRecording(false);
-      setTimerActive(false);
-      const timestamp = new Date().toLocaleTimeString();
-      setGlobalState(prev => ({
-        ...prev,
-        violationCount: (prev.violationCount || 0) + 1,
-        telemetryLogs: [...(prev.telemetryLogs || []), { time: timestamp, event: 'Fullscreen exited / tab switched (Violation)' }]
-      }));
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, [hasStarted, isCheatWarningVisible]);
+  useProctor({
+    interviewId,
+    enabled: hasStarted,
+    cheatWarningVisible: isCheatWarningVisible,
+    onViolation: handleViolation,
+  });
 
   const handleBeginSession = async () => {
     try {
