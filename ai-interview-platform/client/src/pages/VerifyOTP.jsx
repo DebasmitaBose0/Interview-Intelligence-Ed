@@ -100,7 +100,6 @@ export default function VerifyOTP({ setCurrentTab }) {
         </form>
       </div>
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
         .btn-primary:hover:not(:disabled) {
           background: #e2e2e2 !important;
           transform: scale(1.01);
