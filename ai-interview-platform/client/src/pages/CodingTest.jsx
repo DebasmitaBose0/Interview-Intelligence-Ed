@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
 import Editor from '@monaco-editor/react';
+import { useProctor } from '../hooks/useProctor';
 
 const LANGUAGE_BOILERPLATES = {
   javascript: {
@@ -122,33 +123,20 @@ export default function CodingTest({ globalState, setGlobalState, setCurrentTab 
     setEvalReport(null);
   }, [selectedRole, language]);
 
-  useEffect(() => {
-    if (!hasStarted || isCheatWarningVisible) return;
+  const handleViolation = useCallback((eventType) => {
+    setIsCheatWarningVisible(true);
+    if (recognitionRef.current) recognitionRef.current.stop();
+    if (window.codingSimInterval) clearInterval(window.codingSimInterval);
+    setIsRecording(false);
+    setGlobalState(prev => ({ ...prev, violationCount: (prev.violationCount || 0) + 1 }));
+  }, []);
 
-    const handleVisibilityChange = () => {
-      if (document.hidden) handleViolation();
-    };
-
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) handleViolation();
-    };
-
-    const handleViolation = () => {
-      setIsCheatWarningVisible(true);
-      if (recognitionRef.current) recognitionRef.current.stop();
-      if (window.codingSimInterval) clearInterval(window.codingSimInterval);
-      setIsRecording(false);
-      setGlobalState(prev => ({ ...prev, violationCount: (prev.violationCount || 0) + 1 }));
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-    };
-  }, [hasStarted, isCheatWarningVisible]);
+  useProctor({
+    interviewId: globalState.interviewId || 'demo_session_active',
+    enabled: hasStarted,
+    cheatWarningVisible: isCheatWarningVisible,
+    onViolation: handleViolation,
+  });
 
   const handleBeginTest = async () => {
     try {
