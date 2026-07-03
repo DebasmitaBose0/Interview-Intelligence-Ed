@@ -6,6 +6,8 @@ const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const resumeRoutes = require('./routes/resumeRoutes');
 const scheduleRoutes = require('./routes/scheduleRoutes');
+const adminRoutes = require('./routes/adminRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
@@ -16,9 +18,6 @@ if (!configStatus.valid) {
   console.warn(`[Configuration Warning] Missing environment variables: ${configStatus.missing.join(', ')}`);
 }
 
-const adminRoutes = require('./routes/adminRoutes');
-
-const healthRoutes = require('./routes/healthRoutes');
 const rateLimiter = require('./middleware/rateLimiter');
 
 const app = express();
