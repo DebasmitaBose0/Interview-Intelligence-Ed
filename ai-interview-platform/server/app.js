@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
@@ -25,28 +26,28 @@ if (!process.env.JWT_SECRET) {
   console.warn('[Security Warning] JWT_SECRET environment variable is missing. Using default signing key.');
 }
 
-// Attempt to load sandbox security configuration; degrade gracefully if missing
-let sandboxConfig;
-try {
-  sandboxConfig = require('./config/sandboxConfig');
-  const { BLOCKED_MODULES, FORBIDDEN_PATTERNS, SUPPORTED_LANGUAGES } = sandboxConfig;
-  console.log(
-    `[Sandbox Security] Initialized — ${BLOCKED_MODULES.length} blocked modules, ` +
-    `${FORBIDDEN_PATTERNS.length} forbidden patterns, ` +
-    `${SUPPORTED_LANGUAGES.length} supported languages`
-  );
-} catch (configErr) {
-  console.warn(`[Sandbox Security] Config not loaded (${configErr.message}). Using safe defaults.`);
-  sandboxConfig = {
-    BLOCKED_MODULES: [],
-    FORBIDDEN_PATTERNS: [],
-    SUPPORTED_LANGUAGES: ['javascript', 'cpp', 'java', 'python'],
-    EXECUTION_LIMITS: { maxCodeLengthChars: 30000, maxExecutionTimeMs: 10000, maxMemoryMb: 256 },
-  };
-}
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:5173', 'http://localhost:3000'];
 
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.warn(`[CORS] Blocked request from origin: ${origin}`);
+      callback(null, false);
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+// Load security middlewares, including route-level request rate limiters
+app.use(helmet());
+app.use(cors(corsOptions));
 app.use(requestLogger);
-app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(rateLimiter(100));
