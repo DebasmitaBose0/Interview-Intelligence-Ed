@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, AlertCircle, RefreshCw, Plus } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus } from 'lucide-react';
 import { SkeletonCard, SkeletonStatCard, SkeletonTable } from '../components/Common/Skeleton';
+import { Pagination } from '../components/Common/Pagination';
+
+const ITEMS_PER_PAGE = 5;
 
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
@@ -9,6 +12,8 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [errorMessage, setErrorMessage] = useState('');
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
   const [scheduleStatus, setScheduleStatus] = useState('');
+  const [reportPage, setReportPage] = useState(1);
+  const [schedulePage, setSchedulePage] = useState(1);
 
   const fetchReports = async () => {
     setLoading(true);
@@ -176,7 +181,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             <p style={{ fontSize: '13px', color: '#777', lineHeight: '1.5', margin: 0 }}>No upcoming interviews scheduled.</p>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {schedules.slice(0, 4).map(schedule => (
+              {(() => {
+                const start = (schedulePage - 1) * ITEMS_PER_PAGE;
+                return schedules.slice(start, start + ITEMS_PER_PAGE).map(schedule => (
                 <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
                   <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
@@ -198,8 +205,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     {new Date(schedule.scheduledAt).getTime() > Date.now() ? 'Starts later' : 'Start Session'}
                   </button>
                 </div>
-              ))}
+              );
+            })}
             </div>
+            <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
           )}
         </div>
       </div>
@@ -247,7 +256,9 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {reports.map((r) => (
+              {(() => {
+                const start = (reportPage - 1) * ITEMS_PER_PAGE;
+                return reports.slice(start, start + ITEMS_PER_PAGE).map((r) => (
                 <div
                   key={r._id}
                   style={{
@@ -283,8 +294,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     View Report <ChevronRight size={12} />
                   </button>
                 </div>
-              ))}
+              );
+            })}
             </div>
+            <Pagination currentPage={reportPage} totalPages={Math.ceil(reports.length / ITEMS_PER_PAGE)} onPageChange={setReportPage} />
           </div>
 
         </div>
