@@ -8,41 +8,25 @@ import { LoadingOverlay } from '../components/Common/LoadingOverlay';
 export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reports, setReports] = useState([]);
   const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [errorMessage, setErrorMessage] = useState('');
   const [scheduleForm, setScheduleForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
   const [scheduleError, setScheduleError] = useState('');
   const [scheduleSuccess, setScheduleSuccess] = useState('');
 
-  const fetchReports = async () => {
-    setLoading(true);
-    setErrorMessage('');
-    try {
-      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
-      const res = await fetch('/api/report', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || 'Unable to load assessment reports.');
-      }
-      setReports(Array.isArray(json.data) ? json.data : []);
-
-      const scheduleRes = await fetch('/api/schedules', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const scheduleJson = await scheduleRes.json();
-      if (scheduleRes.ok && scheduleJson.success) {
-        setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
-      }
-    } catch (err) {
-      console.error('Error fetching reports:', err);
-      setErrorMessage(err.message || 'Unable to load assessment reports.');
-      setReports([]);
-    } finally {
-      setLoading(false);
+  const fetchReportsData = useCallback(async (signal) => {
+    const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+    const [reportsJson, scheduleJson] = await Promise.all([
+      wrapFetch('/api/report', { headers: { Authorization: `Bearer ${token}` } })(signal),
+      wrapFetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` } })(signal),
+    ]);
+    if (!reportsJson.success) throw new Error(reportsJson.message || 'Unable to load assessment reports.');
+    setReports(Array.isArray(reportsJson.data) ? reportsJson.data : []);
+    if (scheduleJson.success) {
+      setSchedules(Array.isArray(scheduleJson.data) ? scheduleJson.data : []);
     }
-  };
+    return reportsJson;
+  }, []);
+
+  const { loading, error: errorMessage, execute: fetchReports } = useFetch(fetchReportsData, true);
 
   const handleCreateSchedule = async (e) => {
     e.preventDefault();
@@ -66,10 +50,6 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       setScheduleError(err.message || 'Unable to schedule interview.');
     }
   };
-
-  useEffect(() => {
-    fetchReports();
-  }, []);
 
   const handleViewReport = (report) => {
     // Populate global state to render Result screen properly
