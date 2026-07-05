@@ -76,16 +76,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
     }
   }, [isMobile]);
 
-  const [theme, setTheme] = React.useState(() => localStorage.getItem('theme') || 'dark');
-
-  React.useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('theme', theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  const { theme, toggleTheme } = useTheme();
 
   const toggleCollapse = () => {
     if (isMobile) {
