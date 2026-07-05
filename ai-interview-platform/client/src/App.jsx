@@ -19,12 +19,7 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
-  return (
-    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }} role="status" aria-label="Loading">
-      <Loader2 size={24} color="#555" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
-      <p style={{ fontSize: '13px', color: '#555' }}>{message}</p>
-    </div>
-  );
+  return <LoadingOverlay message={message} />;
 }
 
 export default function App() {
@@ -110,12 +105,7 @@ export default function App() {
   };
 
   if (checkingAuth) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', fontFamily: 'Inter, sans-serif' }} role="status" aria-label="Verifying authentication">
-        <Loader2 size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} aria-hidden="true" />
-        <p style={{ fontSize: '13px', color: '#555' }}>Verifying session…</p>
-      </div>
-    );
+    return <LoadingOverlay message="Verifying session..." fullPage />;
   }
 
   return (
