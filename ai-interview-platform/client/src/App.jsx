@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
+import { ToastProvider } from './components/Common/ToastProvider';
 import { Loader2 } from 'lucide-react';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
 import { KeyboardShortcutsDialog } from './components/Common/KeyboardShortcutsDialog';
@@ -27,6 +28,7 @@ function LoadingScreen({ message = 'Loading workspace...' }) {
 }
 
 export default function App() {
+  const isOnline = useOnlineStatus();
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
@@ -123,6 +125,7 @@ export default function App() {
       </a>
       {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <OfflineBanner isOnline={isOnline} />
         {!isAuthPage && <Navbar />}
         <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
           <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
