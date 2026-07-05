@@ -5,6 +5,7 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
+import { ToastProvider } from './components/Common/ToastProvider';
 import { Loader2 } from 'lucide-react';
 import OfflineBanner from './components/Common/OfflineBanner';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
@@ -112,6 +113,6 @@ export default function App() {
           </Suspense>
         </main>
       </div>
-    </div>
+    </ToastProvider>
   );
 }
