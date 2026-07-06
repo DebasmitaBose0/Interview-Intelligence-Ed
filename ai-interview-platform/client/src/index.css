@@ -72,3 +72,12 @@ button { font-family: 'Inter', sans-serif; }
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+@keyframes slideIn {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.chart-fade-in {
+  animation: slideIn 0.4s ease-out forwards;
+}

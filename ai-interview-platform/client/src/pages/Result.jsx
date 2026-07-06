@@ -17,7 +17,9 @@ const normalizeReportScores = (report = {}) => ({
   codingScore: normalizeScore(report.codingScore),
 });
 
-import { pdfThemeConfig } from '../utils/pdfThemeConfig';
+import RadialProgress from '../components/Common/RadialProgress';
+import PerformanceChart from '../components/Common/PerformanceChart';
+
 export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const experience = globalState.experience || 'Mid-level (2-5 yrs)';
@@ -264,10 +266,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '32px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '20px' }}>
           <div>
             <span style={{ fontSize: '11px', fontWeight: '600', color: '#aaa', letterSpacing: '0.05em', textTransform: 'uppercase', display: 'block', marginBottom: '16px' }}>AI Composite Grading</span>
-            <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: '#0d0d0d', border: '2px solid #222', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
-              <span style={{ fontSize: '32px', fontWeight: '700', color: '#fff' }}>{report.overallScore}%</span>
-              <span style={{ fontSize: '10px', color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em', marginTop: '2px' }}>{report.overallScore > 85 ? 'Grade A' : 'Grade B'}</span>
-            </div>
+            <RadialProgress score={report.overallScore} size={130} strokeWidth={10} title={report.overallScore > 85 ? 'Grade A' : 'Grade B'} />
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -301,37 +300,13 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
             Aptitude Matrix Breakdown
           </h2>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Resume Profile Match</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.resumeScore}%</span>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.resumeScore}%`, background: '#fff', borderRadius: '2px' }} />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Interview & Verbal Round</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.interviewScore}%</span>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.interviewScore}%`, background: '#fff', borderRadius: '2px' }} />
-              </div>
-            </div>
-            
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: '500' }}>
-                <span style={{ color: '#ccc' }}>Coding Environment Round</span>
-                <span style={{ color: '#fff', fontWeight: '600' }}>{report.codingScore}%</span>
-              </div>
-              <div style={{ width: '100%', height: '4px', background: '#222', borderRadius: '2px', overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${report.codingScore}%`, background: '#fff', borderRadius: '2px' }} />
-              </div>
-            </div>
-          </div>
+          <PerformanceChart
+            scores={[
+              { category: 'Resume Profile Match', score: report.resumeScore },
+              { category: 'Interview & Verbal Round', score: report.interviewScore },
+              { category: 'Coding Environment Round', score: report.codingScore }
+            ]}
+          />
 
           <div style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
             <span style={{ fontSize: '11px', fontWeight: '600', color: '#ccc', textTransform: 'uppercase' }}>Hiring recommendation verdict</span>
