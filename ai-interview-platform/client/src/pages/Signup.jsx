@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
-// Firebase authentication controller interface with local CamSense session sync.
 import { auth, googleProvider } from '../firebase';
 import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useToast } from '../components/Common/ToastContext';
