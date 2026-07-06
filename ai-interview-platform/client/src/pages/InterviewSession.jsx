@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
-import { STANDARD_AUDIO_CONSTRAINTS } from '../utils/audioConstraints';
 import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
+import { useProctorOffline } from '../hooks/useProctorOffline';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
+  const { isOnline } = useProctorOffline();
 
   // Redirect if no resume uploaded
   useEffect(() => {
@@ -340,6 +341,13 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
               Begin Session <ChevronRight size={16} />
             </button>
           </div>
+        </div>
+      )}
+
+      {!isOnline && (
+        <div style={{ background: '#ef4444', color: '#fff', padding: '10px 16px', borderRadius: '8px', marginBottom: '20px', fontSize: '13px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }} role="alert">
+          <AlertTriangle size={16} />
+          <span>You are currently offline. Proctor telemetry violations will be saved locally and synchronized once your connection is restored.</span>
         </div>
       )}
 

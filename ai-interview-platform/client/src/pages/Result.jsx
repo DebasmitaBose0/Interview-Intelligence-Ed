@@ -17,7 +17,6 @@ const normalizeReportScores = (report = {}) => ({
   codingScore: normalizeScore(report.codingScore),
 });
 
-import { pdfThemeConfig } from '../utils/pdfThemeConfig';
 export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const experience = globalState.experience || 'Mid-level (2-5 yrs)';
