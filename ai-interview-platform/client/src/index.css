@@ -72,3 +72,18 @@ button { font-family: 'Inter', sans-serif; }
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  aside, header, button {
+    display: none !important;
+  }
+}
+
+.pdf-btn-hover:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
