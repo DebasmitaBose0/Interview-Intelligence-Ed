@@ -12,7 +12,7 @@ exports.getHealthStatus = async (req, res, next) => {
       },
       timestamp: new Date().toISOString()
     };
-    res.status(200).json({ success: true, data: health });
+    res.status(200).json({ success: true, status: 'UP', data: health });
   } catch (error) {
     next(error);
   }
