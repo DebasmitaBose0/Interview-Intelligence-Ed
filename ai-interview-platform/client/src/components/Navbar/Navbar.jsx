@@ -4,6 +4,7 @@ import ThemeToggler from '../Common/ThemeToggler';
 
 export default function Navbar() {
   const isMobile = useMediaQuery('(max-width: 768px)');
+  const isOnline = useOnlineStatus();
 
   return (
     <header style={{ height: '52px', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 28px', flexShrink: 0 }}>
