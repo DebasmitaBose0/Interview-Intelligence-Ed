@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon, Menu, X } from 'lucide-react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useTheme } from '../../hooks/useTheme';
 
 const S = {
   aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
