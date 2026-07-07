@@ -3,7 +3,7 @@ import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Com
 import { useMediaDevices } from '../hooks/useMediaDevices';
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 import { sanitizeForDisplay } from '../utils/security';
-import { useToast } from '../components/Common/ToastContext';
+import { useToast } from '../components/Common/ToastProvider';
 
 const S = {
   card: { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '16px' },
