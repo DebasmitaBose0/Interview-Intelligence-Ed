@@ -1,6 +1,7 @@
 import React from 'react';
 import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon, Menu, X } from 'lucide-react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
+import { useTheme } from '../../hooks/useTheme';
 
 const S = {
   aside: (collapsed) => ({
