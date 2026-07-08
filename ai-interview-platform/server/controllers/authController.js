@@ -52,32 +52,32 @@ exports.forgotPassword = async (req, res, next) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      return sendError(res, 'There is no user with that email', 404);
+      return sendError(res, 'No account found with this email address', 404);
     }
 
-    // Generate 6-digit OTP
     const otp = crypto.randomInt(100000, 999999).toString();
 
-    // Save OTP to DB
     await OTP.create({
       email,
       otp
     });
 
-    // Send email
-    const message = `Your password reset OTP is ${otp}. It is valid for 5 minutes.`;
-
     try {
-      await notificationService.send({
+      const result = await notificationService.send({
         to: user.email,
-        subject: 'Password Reset OTP',
-        message
+        subject: 'Password Reset OTP - CamSense AI',
+        message: `Your password reset OTP is ${otp}. It is valid for 5 minutes. Do not share this code with anyone.`
       });
 
-      sendSuccess(res, 'Email sent', 200);
+      if (!result.success) {
+        await OTP.deleteMany({ email });
+        return sendError(res, 'Unable to send OTP email. Please check your email configuration or try again later.', 500);
+      }
+
+      sendSuccess(res, { email: user.email }, 200, 'OTP sent successfully to your registered email');
     } catch (err) {
       await OTP.deleteMany({ email });
-      return sendError(res, 'Email could not be sent', 500);
+      return sendError(res, 'Email service unavailable. Please try again later.', 500);
     }
   } catch (error) {
     handleControllerError(res, error, 'Failed to process forgot password');
