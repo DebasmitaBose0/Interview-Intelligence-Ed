@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2 } from 'lucide-react';
+import { Award, Calendar, BarChart2, CheckCircle, Clock, FileText, ChevronRight, Plus, Loader2, Lock, Trash2, ExternalLink } from 'lucide-react';
 import { Pagination } from '../components/Common/Pagination';
 import { useFetch } from '../hooks/useFetch';
 
@@ -31,6 +31,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [scheduleError, setScheduleError] = useState('');
   const [reportPage, setReportPage] = useState(1);
   const [schedulePage, setSchedulePage] = useState(1);
+  const [deletingSchedule, setDeletingSchedule] = useState(null);
 
   const { data, loading, error: fetchError, execute: refetchData } = useFetch(fetchDashboardData, true);
 
@@ -41,6 +42,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     e.preventDefault();
     setScheduleError('');
     setScheduleSuccess('');
+    if (!scheduleForm.scheduledAt) {
+      setScheduleError('Please select a date and time');
+      return;
+    }
     try {
       const token = localStorage.getItem('camsense_token') || 'demo_token_active';
       const res = await fetch('/api/schedules', {
@@ -57,6 +62,26 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       refetchData();
     } catch (err) {
       setScheduleError(err.message || 'Unable to schedule interview.');
+    }
+  };
+
+  const handleDeleteSchedule = async (id) => {
+    setDeletingSchedule(id);
+    try {
+      const token = localStorage.getItem('camsense_token') || 'demo_token_active';
+      const res = await fetch(`/api/schedules/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        throw new Error(json.message || 'Unable to delete schedule.');
+      }
+      refetchData();
+    } catch (err) {
+      console.error('Delete failed:', err);
+    } finally {
+      setDeletingSchedule(null);
     }
   };
 
@@ -86,6 +111,15 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   };
 
   const stats = calculateStats();
+
+  const getScheduleStatus = (schedule) => {
+    const now = Date.now();
+    const scheduledAt = new Date(schedule.scheduledAt).getTime();
+    const endAt = scheduledAt + (schedule.durationMinutes || 45) * 60 * 1000;
+    if (now > endAt) return { label: 'Completed', color: '#555' };
+    if (now >= scheduledAt) return { label: 'Active', color: '#4ade80' };
+    return { label: 'Upcoming', color: '#facc15' };
+  };
 
   if (loading) {
     return (
@@ -121,8 +155,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-      
-      {/* Dashboard Title */}
+
       <div style={{ marginBottom: '32px' }}>
         <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Performance Dashboard</h1>
         <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
@@ -163,36 +196,66 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {(() => {
                 const start = (schedulePage - 1) * ITEMS_PER_PAGE;
-                return schedules.slice(start, start + ITEMS_PER_PAGE).map(schedule => (
-                <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                  <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
-                  {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
-                  
-                  <button 
-                    disabled={new Date(schedule.scheduledAt).getTime() > Date.now()}
-                    onClick={() => {
-                      setGlobalState(prev => ({ ...prev, role: schedule.role }));
-                      setCurrentTab('setup');
-                    }}
-                    style={{
-                      marginTop: '8px', padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none', cursor: new Date(schedule.scheduledAt).getTime() > Date.now() ? 'not-allowed' : 'pointer',
-                      background: new Date(schedule.scheduledAt).getTime() > Date.now() ? '#1a1a1a' : '#fff',
-                      color: new Date(schedule.scheduledAt).getTime() > Date.now() ? '#555' : '#000',
-                      fontWeight: '600', transition: 'all 0.15s'
-                    }}
-                  >
-                    {new Date(schedule.scheduledAt).getTime() > Date.now() ? 'Starts later' : 'Start Session'}
-                  </button>
-                </div>
-              );
-            })}
+                return schedules.slice(start, start + ITEMS_PER_PAGE).map(schedule => {
+                  const status = getScheduleStatus(schedule);
+                  const isLocked = status.label === 'Upcoming';
+                  return (
+                  <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
+                          <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
+                        </div>
+                        <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} • {schedule.durationMinutes} min</span>
+                        {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
+                      </div>
+                      <button
+                        onClick={() => handleDeleteSchedule(schedule._id)}
+                        disabled={deletingSchedule === schedule._id}
+                        style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
+                        title="Delete schedule"
+                      >
+                        {deletingSchedule === schedule._id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={12} />}
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                      <button
+                        disabled={isLocked}
+                        onClick={() => {
+                          setGlobalState(prev => ({ ...prev, role: schedule.role }));
+                          setCurrentTab('setup');
+                        }}
+                        style={{
+                          flex: 1, padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
+                          cursor: isLocked ? 'not-allowed' : 'pointer',
+                          background: isLocked ? '#1a1a1a' : '#fff',
+                          color: isLocked ? '#555' : '#000',
+                          fontWeight: '600', transition: 'all 0.15s',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                        }}
+                      >
+                        {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              </div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+              {schedules.length > ITEMS_PER_PAGE && (
+                <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
+              )}
+              <button
+                onClick={() => setCurrentTab('schedule')}
+                style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
+              >
+                View All <ExternalLink size={10} />
+              </button>
             </div>
-          )}
-          {schedules.length > ITEMS_PER_PAGE && (
-            <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
-          )}
-        </div>
+          </div>
       </div>
 
       {reports.length === 0 ? (
@@ -209,8 +272,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          {/* Quick Stats Grid */}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
             {[
               { label: 'Interviews Completed', val: stats.total, icon: FileText, desc: 'Total sessions completed' },
@@ -229,7 +291,6 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             ))}
           </div>
 
-          {/* Historical Attempts List */}
           <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px' }}>
             <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#fff', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Clock size={14} color="#888" /> Assessment History

@@ -143,6 +143,13 @@ class FileStorage extends StorageAdapter {
       .filter(s => s.user === userId)
       .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
   }
+
+  async deleteSchedule(id) {
+    const db = this.readDb();
+    db.schedules = (db.schedules || []).filter(s => s._id !== id);
+    this.writeDb(db);
+    return true;
+  }
 }
 
 module.exports = FileStorage;

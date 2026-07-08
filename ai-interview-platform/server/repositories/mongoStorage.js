@@ -74,6 +74,10 @@ class MongoStorage extends StorageAdapter {
   async listSchedules() {
     return [];
   }
+
+  async deleteSchedule() {
+    return true;
+  }
 }
 
 module.exports = MongoStorage;

@@ -51,3 +51,17 @@ exports.createSchedule = async (req, res) => {
     handleControllerError(res, error, 'Failed to create schedule');
   }
 };
+
+exports.deleteSchedule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return sendError(res, 'Schedule ID is required', 400);
+    }
+    const storage = getStorageAdapter();
+    await storage.deleteSchedule(id);
+    sendSuccess(res, null, 200, 'Schedule deleted successfully');
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to delete schedule');
+  }
+};

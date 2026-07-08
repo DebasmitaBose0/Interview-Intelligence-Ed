@@ -90,6 +90,11 @@ class MemoryStorage extends StorageAdapter {
     }
     return list.sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
   }
+
+  async deleteSchedule(id) {
+    this.schedules.delete(id);
+    return true;
+  }
 }
 
 module.exports = MemoryStorage;
