@@ -3,6 +3,7 @@ import { Mail, Lock, Eye, EyeOff, Loader2, ArrowRight } from 'lucide-react';
 import { auth, googleProvider } from '../firebase';
 import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
+import { useToast } from '../components/Common/ToastProvider';
 
 const card = {
   background: '#111',
@@ -185,6 +186,13 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
       toast.show('Signed in successfully!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
@@ -207,6 +215,13 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const fbUser = userCredential.user;
       const token = await fbUser.getIdToken();
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
+        });
+      } catch {}
       toast.show('Signed in with Google!', 'success');
       setTimeout(() => {
         localStorage.setItem('camsense_token', token);
