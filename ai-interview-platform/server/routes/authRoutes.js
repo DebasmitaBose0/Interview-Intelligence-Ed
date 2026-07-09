@@ -18,4 +18,7 @@ router.post('/verify-otp', otpLimiter, authController.verifyOTP);
 router.post('/resend-otp', otpLimiter, authController.resendOTP);
 router.post('/refresh', authController.refreshToken);
 
+// Firebase-MongoDB user sync route
+router.post('/sync-user', protect, authController.syncUser);
+
 module.exports = router;
