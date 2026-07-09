@@ -53,6 +53,7 @@ exports.forgotPassword = async (req, res, next) => {
     let user = await User.findOne({ email });
 
     if (!user) {
+      return sendError(res, 'No account found with this email address', 404);
       try {
         const fbUser = await admin.auth().getUserByEmail(email);
         if (fbUser) {
@@ -71,6 +72,10 @@ exports.forgotPassword = async (req, res, next) => {
 
     const otp = crypto.randomInt(100000, 999999).toString();
 
+    await OTP.create({
+      email,
+      otp
+    });
     await OTP.create({ email, otp });
 
     try {
@@ -80,6 +85,12 @@ exports.forgotPassword = async (req, res, next) => {
         message: `Your password reset OTP is ${otp}. It is valid for 5 minutes. Do not share this code with anyone.`
       });
 
+      if (!result.success) {
+        await OTP.deleteMany({ email });
+        return sendError(res, 'Unable to send OTP email. Please check your email configuration or try again later.', 500);
+      }
+
+      sendSuccess(res, { email: user.email }, 200, 'OTP sent successfully to your registered email');
       if (!result || !result.success) {
         await OTP.deleteMany({ email });
         return sendError(res, 'Failed to send OTP email. Please try again later.', 500);
