@@ -10,6 +10,7 @@ import { LoadingOverlay } from './components/Common/LoadingOverlay';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
+import OfflineBanner from './components/Common/OfflineBanner';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -131,6 +132,7 @@ export default function App() {
           </main>
         </div>
       </div>
+      <OfflineBanner />
     </ToastProvider>
   );
 }
