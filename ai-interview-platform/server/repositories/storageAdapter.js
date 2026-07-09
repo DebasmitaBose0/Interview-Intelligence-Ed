@@ -14,6 +14,7 @@ class StorageAdapter {
   async getResume(userId) { throw new Error('Not implemented'); }
   async saveSchedule(schedule) { throw new Error('Not implemented'); }
   async listSchedules(userId) { throw new Error('Not implemented'); }
+  async getSchedule(id) { throw new Error('Not implemented'); }
   async deleteSchedule(id) { throw new Error('Not implemented'); }
 }
 
