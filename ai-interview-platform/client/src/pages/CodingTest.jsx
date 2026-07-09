@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, AlertCircle, Award } from 'lucide-react';
+// Proctoring hook triggers background listeners for window focus checks
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProctor } from '../hooks/useProctor';
 import { LoadingOverlay } from '../components/Common/LoadingOverlay';

@@ -1,2 +1,0 @@
-// Obsolete logging hooks
-export const trackAction = (a) => console.log('Action tracked:', a);
