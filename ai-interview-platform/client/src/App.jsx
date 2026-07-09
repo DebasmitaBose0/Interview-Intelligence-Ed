@@ -12,6 +12,7 @@ import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ErrorDashboard = lazy(() => import('./pages/ErrorDashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
 const InterviewSession = lazy(() => import('./pages/InterviewSession'));
 const CodingTest = lazy(() => import('./pages/CodingTest'));
@@ -102,6 +103,7 @@ export default function App() {
       case 'session': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'coding': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'result': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'errors': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ErrorDashboard setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       default: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
     }
   };

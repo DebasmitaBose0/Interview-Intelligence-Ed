@@ -9,6 +9,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
+const { securityHeaders } = require('./middleware/securityHeaders');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
 const configCheck = require('./utils/configCheck');
@@ -46,6 +47,7 @@ const corsOptions = {
 
 // Load security middlewares, including route-level request rate limiters
 app.use(helmet());
+app.use(securityHeaders);
 app.use(cors(corsOptions));
 app.use(requestLogger);
 app.use(express.json({ limit: '10mb' }));
@@ -64,6 +66,12 @@ app.use('/api/admin', adminRoutes);
 
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');
+});
+
+app.post('/api/csp-violation', express.json({ type: 'application/csp-report' }), (req, res) => {
+  const log = require('./services/logger');
+  log.warn('CSP Violation', { report: req.body, headers: req.headers });
+  res.status(204).end();
 });
 
 // Register global error routing bounds
