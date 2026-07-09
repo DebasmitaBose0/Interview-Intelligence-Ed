@@ -1,5 +1,26 @@
 const admin = require('firebase-admin');
 const logger = require('../services/logger');
+const User = require('../models/User');
+
+const syncFirebaseUserToMongoDB = async (firebaseUser) => {
+  try {
+    const existing = await User.findOne({ email: firebaseUser.email });
+    if (!existing) {
+      await User.create({
+        name: firebaseUser.name || firebaseUser.email.split('@')[0],
+        email: firebaseUser.email,
+        password: require('crypto').randomBytes(16).toString('hex'),
+        firebaseUid: firebaseUser.uid
+      });
+      console.log(`[Auth] Synced Firebase user to MongoDB: ${firebaseUser.email}`);
+    } else if (!existing.firebaseUid) {
+      existing.firebaseUid = firebaseUser.uid;
+      await existing.save();
+    }
+  } catch (err) {
+    console.warn(`[Auth] MongoDB sync skipped: ${err.message}`);
+  }
+};
 
 exports.protect = async (req, res, next) => {
   try {
@@ -16,6 +37,7 @@ exports.protect = async (req, res, next) => {
     const decoded = await admin.auth().verifyIdToken(token);
     req.user = { ...decoded, _id: decoded.uid };
     req.userId = decoded.uid;
+    syncFirebaseUserToMongoDB(decoded);
     next();
   } catch (err) {
     logger.error('Token verification failed', { error: err.message });
