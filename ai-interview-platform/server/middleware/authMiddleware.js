@@ -35,6 +35,21 @@ const syncFirebaseUserToMongoDB = async (firebaseUser) => {
     }
     console.error('[Auth Sync] Error:', err.message);
     return null;
+    const existing = await User.findOne({ email: firebaseUser.email });
+    if (!existing) {
+      await User.create({
+        name: firebaseUser.name || firebaseUser.email.split('@')[0],
+        email: firebaseUser.email,
+        password: require('crypto').randomBytes(16).toString('hex'),
+        firebaseUid: firebaseUser.uid
+      });
+      console.log(`[Auth] Synced Firebase user to MongoDB: ${firebaseUser.email}`);
+    } else if (!existing.firebaseUid) {
+      existing.firebaseUid = firebaseUser.uid;
+      await existing.save();
+    }
+  } catch (err) {
+    console.warn(`[Auth] MongoDB sync skipped: ${err.message}`);
   }
 };
 
@@ -62,6 +77,8 @@ exports.protect = async (req, res, next) => {
       console.error('[Auth] Background sync failed:', err.message);
     });
 
+    req.user = { ...decoded, _id: decoded.uid };
+    syncFirebaseUserToMongoDB(decoded);
     next();
   } catch (err) {
     console.error('[Auth] Token verification failed:', err.message);
