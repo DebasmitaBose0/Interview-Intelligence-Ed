@@ -11,7 +11,9 @@
     "build": "npm run build --prefix client",
     "postinstall": "npm install --prefix client",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
-    "validate-env": "node scripts/validate-env.js"
+    "validate-env": "node scripts/validate-env.js",
+    "migrate": "node -e \"require('./server/utils/database').connectDatabase().then(() => { require('./server/db/migrations/migrationRunner').runMigrations().then(() => process.exit(0)).catch(() => process.exit(1)); })\"",
+    "migrate:rollback": "node -e \"require('./server/utils/database').connectDatabase().then(() => { require('./server/db/migrations/migrationRunner').rollbackLastMigration().then(() => process.exit(0)).catch(() => process.exit(1)); })\""
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
