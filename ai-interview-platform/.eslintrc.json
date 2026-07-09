@@ -1,0 +1,25 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true,
+    "jest": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021
+  },
+  "rules": {
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-console": "off",
+    "prefer-const": "warn",
+    "no-var": "warn",
+    "eqeqeq": ["warn", "smart"],
+    "curly": "warn",
+    "no-throw-literal": "warn",
+    "no-return-await": "warn",
+    "require-await": "warn",
+    "no-path-concat": "warn",
+    "semi": ["warn", "always"],
+    "quotes": ["warn", "single", { "avoidEscape": true }]
+  },
+  "ignorePatterns": ["node_modules/", "dist/", "build/", "coverage/", "client/"]
+}

@@ -9,9 +9,19 @@
     "server": "nodemon server/server.js",
     "client": "npm run dev --prefix client",
     "build": "npm run build --prefix client",
+    "build:server": "npm run test && npm run lint",
     "postinstall": "npm install --prefix client",
     "test": "jest --runInBand --detectOpenHandles --forceExit",
-    "validate-env": "node scripts/validate-env.js"
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --coverage --runInBand --forceExit",
+    "test:security": "jest --testPathPattern='security/' --runInBand --forceExit",
+    "test:e2e": "jest --testPathPattern='e2e/' --runInBand --forceExit",
+    "validate-env": "node scripts/validate-env.js",
+    "lint": "npx eslint . --ext .js --max-warnings 50",
+    "lint:fix": "npx eslint . --ext .js --fix",
+    "security:audit": "npm audit --audit-level=high",
+    "security:scan": "node scripts/security-scan.js",
+    "ci": "npm run lint && npm test && npm run security:audit"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -29,6 +39,7 @@
     "pdf-parse": "^1.1.1"
   },
   "devDependencies": {
+    "eslint": "^8.57.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.0",
     "supertest": "^6.3.4"

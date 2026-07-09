@@ -1,0 +1,48 @@
+# Auto-label rules for PR labeler
+
+# Route labels
+'server/routes/*':
+  - 'routes'
+'server/controllers/*':
+  - 'controllers'
+'server/models/*':
+  - 'models'
+'server/middleware/*':
+  - 'middleware'
+'server/services/*':
+  - 'services'
+
+# Area labels
+'server/**':
+  - 'backend'
+'client/**':
+  - 'frontend'
+'.github/**':
+  - 'ci-cd'
+'**/*.test.*':
+  - 'tests'
+
+# Tech stack labels
+'**/package*.json':
+  - 'dependencies'
+'**/*.yml':
+  - 'configuration'
+'**/*.yaml':
+  - 'configuration'
+
+# Size-based labels (managed by size-label-action)
+# Feature labels
+'server/middleware/sanitize*':
+  - 'security'
+'server/middleware/securityHeaders*':
+  - 'security'
+'server/services/logger*':
+  - 'logging'
+'server/services/errorTracker*':
+  - 'monitoring'
+'server/services/queryProfiler*':
+  - 'performance'
+'server/utils/indexManager*':
+  - 'performance'
+'server/db/migrations/*':
+  - 'migrations'

@@ -1,0 +1,54 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /ai-interview-platform
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - automated
+    versioning-strategy: increase
+    allow:
+      - dependency-type: direct
+    ignore:
+      - dependency-name: mongoose
+        versions: ['>=10.x']
+      - dependency-name: '@google/generative-ai'
+        versions: ['>=1.x']
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+
+  - package-ecosystem: npm
+    directory: /ai-interview-platform/client
+    schedule:
+      interval: weekly
+      day: monday
+      time: '09:00'
+      timezone: America/New_York
+    open-pull-requests-limit: 10
+    labels:
+      - dependencies
+      - frontend
+      - automated
+    versioning-strategy: increase
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+      include: scope
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    labels:
+      - ci-cd
+      - automated
+    commit-message:
+      prefix: ci
+      include: scope

@@ -1,0 +1,127 @@
+name: CI - Security Scan
+
+on:
+  push:
+    branches: [master, develop, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [master, develop]
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  dependency-scan:
+    name: Dependency Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-interview-platform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          CI: true
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run Snyk Security Scan
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+  code-scan:
+    name: CodeQL Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: '/language:javascript'
+
+  secrets-scan:
+    name: Secrets Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog Secrets Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --results=verified,unknown
+
+  nosql-injection:
+    name: NoSQL Injection Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Custom NoSQL injection pattern scan
+        run: |
+          echo "Scanning for NoSQL injection patterns..."
+          INJECTION_PATTERNS=(
+            '\$where'
+            '\$gt'
+            '\$gte'
+            '\$lt'
+            '\$lte'
+            '\$ne'
+            '\$regex'
+            '\$exists'
+            '\$eq'
+          )
+          FOUND=false
+          for pattern in "${INJECTION_PATTERNS[@]}"; do
+            RESULTS=$(grep -rn "$pattern" --include='*.js' --include='*.jsx' \
+              --exclude-dir=node_modules \
+              --exclude-dir=dist \
+              --exclude-dir=build \
+              --exclude='*sanitize*' \
+              --exclude='*test*' \
+              . || true)
+            if [ -n "$RESULTS" ]; then
+              echo "WARNING: Possible NoSQL injection pattern '$pattern' found:"
+              echo "$RESULTS"
+              FOUND=true
+            fi
+          done
+          if [ "$FOUND" = "true" ]; then
+            echo "NoSQL injection patterns detected - review required"
+          else
+            echo "No NoSQL injection patterns detected"
+          fi

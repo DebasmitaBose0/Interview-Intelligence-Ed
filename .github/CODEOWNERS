@@ -1,0 +1,14 @@
+# Default owners for the entire repository
+* @DebasmitaBose0
+
+# Server-side code
+/server/** @DebasmitaBose0
+
+# Client-side code
+/client/** @DebasmitaBose0
+
+# CI/CD configuration
+.github/** @DebasmitaBose0
+
+# Tests
+**/*.test.* @DebasmitaBose0
