@@ -10,9 +10,10 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [videoChunks, setVideoChunks] = useState([]);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState('');
+  const [cameraError, setCameraError] = useState('');
   const liveVideoRef = useRef(null);
+  const chunksRef = useRef([]);
 
-  // Set stream as srcObject when the video node mounts dynamically
   const setVideoRef = (node) => {
     if (node && stream) {
       node.srcObject = stream;
@@ -26,9 +27,7 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
     }
   }, [stream]);
 
-
   useEffect(() => {
-    // Start camera stream on mount if active
     if (isSessionActive && !stream) {
       getCameraPermission();
     }
@@ -38,10 +37,11 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
   }, [isSessionActive]);
 
   const getCameraPermission = async () => {
+    setCameraError('');
     try {
       const combinedStream = await navigator.mediaDevices.getUserMedia({
-        video: STANDARD_VIDEO_CONSTRAINTS,
-        audio: STANDARD_AUDIO_CONSTRAINTS
+        video: { width: { ideal: 320 }, height: { ideal: 240 }, facingMode: 'user' },
+        audio: { echoCancellation: true, noiseSuppression: true }
       });
       setPermission(true);
       setStream(combinedStream);
@@ -49,7 +49,12 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
         liveVideoRef.current.srcObject = combinedStream;
       }
     } catch (err) {
-      console.error('Error getting media devices permissions:', err);
+      const msg = err.name === 'NotAllowedError'
+        ? 'Camera access denied. Please grant permission in browser settings.'
+        : err.name === 'NotFoundError'
+        ? 'No camera device found.'
+        : `Camera error: ${err.message}`;
+      setCameraError(msg);
       setPermission(false);
     }
   };
@@ -63,26 +68,33 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
 
   const startRecording = () => {
     if (!stream) return;
+    chunksRef.current = [];
     setRecordingStatus('recording');
-    const media = new MediaRecorder(stream, { mimeType: 'video/webm' });
-    setMediaRecorder(media);
-    media.start();
-    let localChunks = [];
-    media.ondataavailable = (event) => {
-      if (typeof event.data !== 'undefined' && event.data.size > 0) {
-        localChunks.push(event.data);
-      }
-    };
-    setVideoChunks(localChunks);
-    media.onstop = () => {
-      const videoBlob = new Blob(localChunks, { type: 'video/webm' });
-      const videoUrl = URL.createObjectURL(videoBlob);
-      setRecordedVideoUrl(videoUrl);
-      if (onRecordingComplete) {
-        onRecordingComplete(videoUrl, videoBlob);
-      }
-      setVideoChunks([]);
-    };
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9'
+      : 'video/webm';
+    try {
+      const media = new MediaRecorder(stream, { mimeType });
+      setMediaRecorder(media);
+      media.ondataavailable = (event) => {
+        if (typeof event.data !== 'undefined' && event.data.size > 0) {
+          chunksRef.current.push(event.data);
+        }
+      };
+      media.onstop = () => {
+        const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const videoUrl = URL.createObjectURL(videoBlob);
+        setRecordedVideoUrl(videoUrl);
+        if (onRecordingComplete) {
+          onRecordingComplete(videoUrl, videoBlob);
+        }
+        chunksRef.current = [];
+      };
+      media.start(1000);
+    } catch (err) {
+      setCameraError(`Recording init failed: ${err.message}`);
+      setRecordingStatus('idle');
+    }
   };
 
   const stopRecording = () => {
@@ -154,9 +166,12 @@ export default function VideoRecorder({ onRecordingComplete, isSessionActive }) 
             </a>
           </div>
         )}
+        {!permission && (
+          <button onClick={getCameraPermission} disabled={!!cameraError} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #333', background: 'transparent', color: cameraError ? '#555' : '#fff', fontSize: '11px', fontWeight: '600', cursor: cameraError ? 'not-allowed' : 'pointer' }}>
+            Retry Camera
+          </button>
+        )}
       </div>
     </div>
   );
 }
-
-// Video telemetry monitoring enabled
