@@ -26,3 +26,10 @@ uploads/
 *.pdf
 .db.json
 *old_controller*
+
+# Database backups
+/ai-interview-platform/backups/
+
+# Logs
+logs/
+*.log
