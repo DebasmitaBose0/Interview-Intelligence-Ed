@@ -1,9 +1,5 @@
-/**
- * Centralized Express Error-Handling Middleware
- * ─────────────────────────────────────────────
- * Catches all unhandled errors thrown or forwarded via next(err) across
- * every route and middleware in the application.
- */
+const { sendError } = require('../../utils/apiResponse');
+const logger = require('../../services/logger');
 
 class ApiError extends Error {
   constructor(statusCode, message, details = null) {
@@ -12,63 +8,67 @@ class ApiError extends Error {
     this.details = details;
     this.status = `${statusCode}`.startsWith('4') ? 'fail' : 'error';
     this.isOperational = true;
-
     Error.captureStackTrace(this, this.constructor);
   }
 }
 
-/**
- * Handles requests that do not match any registered route.
- */
 const notFoundHandler = (req, res, _next) => {
-  res.status(404).json({
-    success: false,
-    message: `Route not found: ${req.method} ${req.originalUrl}`,
-  });
+  return sendError(res, `Route not found: ${req.method} ${req.originalUrl}`, 404);
 };
 
-/**
- * Global error-catching middleware.
- */
 const globalErrorHandler = (err, req, res, _next) => {
-  const statusCode = err.statusCode || err.status || 500;
-  const isServerError = statusCode >= 500;
+  let statusCode = err.statusCode || err.status || 500;
 
-  const logPayload = {
-    timestamp: new Date().toISOString(),
+  if (err.name === 'MulterError') {
+    statusCode = 400;
+    return sendError(res, `Upload error: ${err.message}`, 400);
+  }
+
+  if (err.name === 'ValidationError' && err.errors) {
+    statusCode = 400;
+    const fields = Object.keys(err.errors).map(f => ({
+      field: f,
+      message: err.errors[f].message,
+    }));
+    return res.status(400).json({
+      success: false,
+      message: 'Validation failed',
+      errors: fields,
+      timestamp: new Date().toISOString(),
+    });
+  const logMeta = {
+    requestId: req.requestId,
+    userId: req.user ? req.user._id || req.user.uid : null,
+    clientIp: req.ip,
     method: req.method,
     url: req.originalUrl,
-    status: statusCode,
-    message: err.message || 'Internal Server Error',
-    ...(req.requestId && { requestId: req.requestId }),
-    ...(req.user && { userId: req.user._id }),
-    ...(req.ip && { clientIp: req.ip }),
   };
 
   if (isServerError) {
-    console.error('[ErrorHandler] Unhandled server error:', logPayload);
-    if (err.stack) {
-      console.error(err.stack);
-    }
+    logger.error(err.message, { ...logMeta, stack: err.stack });
   } else {
-    console.warn('[ErrorHandler] Client error:', logPayload);
+    logger.warn(err.message, logMeta);
   }
 
-  const responseBody = {
-    success: false,
-    message: isServerError ? 'Internal Server Error' : (err.message || 'An error occurred'),
-    ...(err.details && { details: err.details })
-  };
-
-  if (process.env.NODE_ENV === 'development') {
-    responseBody.stack = err.stack;
+  if (err.name === 'CastError') {
+    statusCode = 400;
+    return sendError(res, `Invalid ${err.path}: ${err.value}`, 400);
   }
+
+  if (err.code === 11000) {
+    statusCode = 409;
+    const field = Object.keys(err.keyValue || {})[0] || 'field';
+    return sendError(res, `Duplicate value for ${field}`, 409);
+  }
+
+  const isServerError = statusCode >= 500;
+  const message = isServerError ? 'Internal Server Error' : (err.message || 'An error occurred');
 
   if (res.headersSent) {
     return;
   }
 
-  res.status(statusCode).json(responseBody);
+  return sendError(res, message, statusCode, err.details);
 };
 
 module.exports = { ApiError, notFoundHandler, globalErrorHandler };

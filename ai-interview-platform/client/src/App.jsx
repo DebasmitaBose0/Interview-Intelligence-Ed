@@ -1,11 +1,15 @@
-import React, { Suspense, lazy, useState, useEffect } from 'react';
+import React, { Suspense, lazy, useState, useEffect, useCallback, useMemo } from 'react';
 import Sidebar from './components/Navbar/Sidebar';
 import Navbar from './components/Navbar/Navbar';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Landing from './pages/Landing';
-import { Loader2 } from 'lucide-react';
+import { ToastProvider } from './components/Common/ToastProvider';
+import { LoadingOverlay } from './components/Common/LoadingOverlay';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
+import { useMediaQuery } from './hooks/useMediaQuery';
+import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
 
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
@@ -14,18 +18,15 @@ const CodingTest = lazy(() => import('./pages/CodingTest'));
 const Result = lazy(() => import('./pages/Result'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
+const ScheduleInterview = lazy(() => import('./pages/ScheduleInterview'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
-  return (
-    <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-      <Loader2 size={24} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
-      <p style={{ fontSize: '13px', color: '#555' }}>{message}</p>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
+  return <LoadingOverlay message={message} />;
 }
 
 export default function App() {
+  const isOnline = useOnlineStatus();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [token, setToken] = useState(localStorage.getItem('camsense_token') || '');
   const [user, setUser] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
@@ -44,6 +45,30 @@ export default function App() {
     completedTime: '',
     violationCount: 0,
   });
+
+  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
+
+  const shortcutsDialog = useShortcutsDialog();
+
+  const navigateTo = useCallback((tab) => {
+    setCurrentTab(tab);
+    if (!isAuthPage && tab !== currentTab) {
+      shortcutsDialog.close();
+    }
+  }, [currentTab, isAuthPage, shortcutsDialog]);
+
+  const appShortcuts = useMemo(() => ({
+    '?': { label: 'Toggle keyboard shortcuts help', category: 'General', onPress: shortcutsDialog.toggle },
+    'h': { label: 'Go to Home', category: 'Navigation', onPress: () => navigateTo('home') },
+    'd': { label: 'Go to Dashboard', category: 'Navigation', onPress: () => navigateTo('dashboard') },
+    's': { label: 'Go to Interview Setup', category: 'Navigation', onPress: () => navigateTo('setup') },
+    'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo('schedule') },
+    'r': { label: 'Go to Results', category: 'Navigation', onPress: () => navigateTo('result') },
+    'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo('schedule') },
+    'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
+  }), [shortcutsDialog, navigateTo]);
+
+  const registeredShortcuts = useKeyboardShortcuts(appShortcuts, !isAuthPage);
 
   useEffect(() => {
     if (token) {
@@ -69,44 +94,43 @@ export default function App() {
 
   const renderContent = () => {
     switch (currentTab) {
-      case 'landing': return <Landing setCurrentTab={setCurrentTab} />;
-      case 'login': return <Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
-      case 'signup': return <Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} />;
-      case 'forgot-password': return <ForgotPassword setCurrentTab={setCurrentTab} />;
-      case 'verify-otp': return <VerifyOTP setCurrentTab={setCurrentTab} />;
-      case 'home': return <Home setCurrentTab={setCurrentTab} />;
-      case 'dashboard': return <Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} />;
-      case 'setup': return <InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
-      case 'session': return <InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
-      case 'coding': return <CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
-      case 'result': return <Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} />;
-      default: return <Home setCurrentTab={setCurrentTab} />;
+      case 'landing': return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Landing setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'login': return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Login setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'signup': return <GuestRoute token={token} setCurrentTab={setCurrentTab}><Signup setToken={setToken} setUser={setUser} setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'forgot-password': return <GuestRoute token={token} setCurrentTab={setCurrentTab}><ForgotPassword setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'verify-otp': return <GuestRoute token={token} setCurrentTab={setCurrentTab}><VerifyOTP setCurrentTab={setCurrentTab} /></GuestRoute>;
+      case 'home': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'dashboard': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} /></ProtectedRoute>;
+      case 'schedule': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'setup': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'session': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'coding': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'result': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'schedule': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      default: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
     }
   };
 
   if (checkingAuth) {
-    return (
-      <div style={{ minHeight: '100vh', background: '#0a0a0a', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', fontFamily: 'Inter, sans-serif' }}>
-        <Loader2 size={28} color="#555" style={{ animation: 'spin 1s linear infinite' }} />
-        <p style={{ fontSize: '13px', color: '#555' }}>Verifying session…</p>
-        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-      </div>
-    );
+    return <LoadingOverlay message="Verifying session..." fullPage />;
   }
 
-  const isAuthPage = currentTab === 'login' || currentTab === 'signup' || currentTab === 'landing' || currentTab === 'forgot-password' || currentTab === 'verify-otp';
-
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a0a0a', fontFamily: 'Inter, sans-serif', color: '#e0e0e0' }}>
-      {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {!isAuthPage && <Navbar />}
-        <main style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
-          <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
-            {renderContent()}
-          </Suspense>
-        </main>
+    <ToastProvider>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg-app)', fontFamily: 'Inter, sans-serif', color: 'var(--color-text)', transition: 'background 0.3s, color 0.3s' }}>
+        <a href="#main-content" className="skip-link" style={{ position: 'absolute', left: '-9999px', top: 0, zIndex: 9999, padding: '8px 16px', background: '#fff', color: '#000', fontSize: '14px', fontWeight: '600', textDecoration: 'none' }}>
+          Skip to main content
+        </a>
+        {!isAuthPage && <Sidebar currentTab={currentTab} setCurrentTab={setCurrentTab} user={user} globalState={globalState} onLogout={handleLogout} />}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+          {!isAuthPage && <Navbar />}
+          <main id="main-content" role="main" aria-label="Main content" style={{ flex: 1, overflowY: 'auto', padding: isAuthPage ? '0' : '28px 32px', display: isAuthPage ? 'flex' : 'block', alignItems: isAuthPage ? 'center' : undefined, justifyContent: isAuthPage ? 'center' : undefined }}>
+            <Suspense fallback={<LoadingScreen message="Loading assessment workspace..." />}>
+              {renderContent()}
+            </Suspense>
+          </main>
+        </div>
       </div>
-    </div>
+    </ToastProvider>
   );
 }

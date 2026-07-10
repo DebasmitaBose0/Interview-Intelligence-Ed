@@ -1,6 +1,7 @@
 {
   "name": "ai-interview-platform-client",
   "private": true,
+  "license": "MIT",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
@@ -12,6 +13,7 @@
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
+    "axios": "^1.18.1",
     "firebase": "^12.13.0",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.378.0",
