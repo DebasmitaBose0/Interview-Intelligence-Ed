@@ -9,6 +9,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
+const { sanitizeMiddleware } = require('./middleware/sanitizeMiddleware');
 const { apiVersioning } = require('./middleware/apiVersion');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
@@ -53,6 +54,7 @@ app.use(requestLogger);
 app.use(apiVersioning);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(sanitizeMiddleware);
 app.use(rateLimiter(100));
 
 app.use('/api/auth', authRoutes);
@@ -67,6 +69,7 @@ app.use('/api/schedules', scheduleRoutes);
 app.use('/api/health', healthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', require('./routes/queryRoutes'));
+app.use('/api/admin', require('./routes/errorRoutes'));
 
 app.get('/', (req, res) => {
   res.send('AI Interview Platform API is running...');
