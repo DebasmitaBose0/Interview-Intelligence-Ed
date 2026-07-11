@@ -1,8 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react';
-import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Sun, Moon, Menu, X, Calendar } from 'lucide-react';
+import { Home as HomeIcon, Settings, Mic, Code2, Award, Cpu, LogOut, Lock, BarChart2, Menu, X } from 'lucide-react';
 import { useMediaQuery } from '../../hooks/useMediaQuery';
-import { useTheme } from '../../hooks/useTheme';
-import { TABS } from '../../constants/tabs';
+import ThemeToggle from '../Common/ThemeToggle';
 
 const S = {
   aside: { width: '240px', background: 'var(--bg-card)', borderRight: '1px solid var(--border-color)', minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '24px 16px', flexShrink: 0, transition: 'background 0.3s, border-color 0.3s' },
@@ -50,8 +49,6 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
       firstFocusable?.focus();
     }
   }, [mobileOpen]);
-
-  const { theme, toggleTheme } = useTheme();
 
   const toggleCollapse = () => {
     if (isMobile) setMobileOpen(prev => !prev);
@@ -168,16 +165,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
 
           {!effectiveCollapsed && (
             <div style={{ marginTop: 'auto', marginBottom: '16px' }}>
-              <button
-                onClick={toggleTheme}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: '10px', padding: '9px 12px', borderRadius: '8px', border: '1px solid var(--border-color)',
-                  background: 'transparent', color: 'var(--color-secondary)', fontSize: '13px', cursor: 'pointer', transition: 'all 0.15s'
-                }}
-              >
-                {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-                <span>{theme === 'dark' ? 'Light Mode' : 'Dark Mode'}</span>
-              </button>
+              <ThemeToggle variant="full" />
             </div>
           )}
 
