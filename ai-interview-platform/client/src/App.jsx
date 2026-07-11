@@ -11,7 +11,9 @@ import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
 import PwaInstallPrompt from './components/Common/PwaInstallPrompt';
+import OfflineBanner from './components/Common/OfflineBanner';
 
+// Hook listeners for accessibility options and keyboard navigation shortcuts
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const InterviewSetup = lazy(() => import('./pages/InterviewSetup'));
 const InterviewSession = lazy(() => import('./pages/InterviewSession'));
@@ -19,6 +21,7 @@ const CodingTest = lazy(() => import('./pages/CodingTest'));
 const Result = lazy(() => import('./pages/Result'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
+const ScheduleInterview = lazy(() => import('./pages/ScheduleInterview'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
   return <LoadingOverlay message={message} />;
@@ -62,7 +65,9 @@ export default function App() {
     'h': { label: 'Go to Home', category: 'Navigation', onPress: () => navigateTo('home') },
     'd': { label: 'Go to Dashboard', category: 'Navigation', onPress: () => navigateTo('dashboard') },
     's': { label: 'Go to Interview Setup', category: 'Navigation', onPress: () => navigateTo('setup') },
+    'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo('schedule') },
     'r': { label: 'Go to Results', category: 'Navigation', onPress: () => navigateTo('result') },
+    'k': { label: 'Go to Schedule', category: 'Navigation', onPress: () => navigateTo('schedule') },
     'Escape': { label: 'Close dialog or cancel', category: 'General', onPress: shortcutsDialog.close },
   }), [shortcutsDialog, navigateTo]);
 
@@ -99,10 +104,12 @@ export default function App() {
       case 'verify-otp': return <GuestRoute token={token} setCurrentTab={setCurrentTab}><VerifyOTP setCurrentTab={setCurrentTab} /></GuestRoute>;
       case 'home': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'dashboard': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Dashboard setCurrentTab={setCurrentTab} setGlobalState={setGlobalState} /></ProtectedRoute>;
+      case 'schedule': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'setup': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSetup setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'session': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'coding': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case 'result': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case 'schedule': return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ScheduleInterview setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       default: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
     }
   };
@@ -128,6 +135,7 @@ export default function App() {
         </div>
       </div>
       <PwaInstallPrompt />
+      <OfflineBanner />
     </ToastProvider>
   );
 }
