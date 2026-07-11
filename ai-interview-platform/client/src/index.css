@@ -25,11 +25,20 @@
 
 * { box-sizing: border-box; }
 
+.skip-link {
+  transition: none;
+}
 .skip-link:focus {
   left: 16px !important;
   top: 16px !important;
   outline: 2px solid #000;
   outline-offset: 2px;
+  text-decoration: none;
+  z-index: 9999;
+  clip: auto;
+  width: auto;
+  height: auto;
+  overflow: visible;
 }
 
 :focus-visible {
@@ -43,6 +52,14 @@ input:focus:not(:focus-visible),
 select:focus:not(:focus-visible),
 textarea:focus:not(:focus-visible) {
   outline: none;
+}
+
+[aria-invalid="true"] {
+  border-color: #ef4444 !important;
+}
+
+[role="alert"]:empty {
+  display: none;
 }
 
 body {
