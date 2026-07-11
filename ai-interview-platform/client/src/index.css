@@ -11,6 +11,7 @@
   --color-secondary: #b0b0b0;
   --color-primary: #ffffff;
   --border-color: #1e1e1e;
+  --offline-accent: #ef4444;
 }
 
 [data-theme='light'] {
