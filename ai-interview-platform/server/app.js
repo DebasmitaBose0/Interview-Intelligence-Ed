@@ -9,6 +9,7 @@ const scheduleRoutes = require('./routes/scheduleRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const requestLogger = require('./middleware/logging/requestLogger');
+const { apiVersioning } = require('./middleware/apiVersion');
 
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
 const configCheck = require('./utils/configCheck');
@@ -49,11 +50,14 @@ const corsOptions = {
 app.use(helmet());
 app.use(cors(corsOptions));
 app.use(requestLogger);
+app.use(apiVersioning);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(rateLimiter(100));
 
 app.use('/api/auth', authRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v2/auth', require('./routes/v2/authRoutes'));
 app.use('/api', require('./routes/telemetryRoutes'));
 app.use('/api', require('./routes/backupRoutes'));
 app.use('/api/interview', interviewRoutes);

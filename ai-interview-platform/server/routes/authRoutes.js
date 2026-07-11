@@ -14,6 +14,17 @@ const {
 
 const otpLimiter = rateLimiter(3, 15 * 60 * 1000);
 
+const addDeprecationHeaders = (req, res, next) => {
+  res.setHeader('X-API-Version', '1.0');
+  res.setHeader('X-API-Deprecated', 'true');
+  res.setHeader('X-API-Sunset', '2026-12-31');
+  next();
+};
+
+router.use(addDeprecationHeaders);
+
+// Stateless authentication endpoints mapping user JWT claims.
+// Leverages the unified notification dispatch service for transactional recovery codes.
 router.get('/me', protect, authController.getMe);
 router.post('/logout', protect, authController.logout);
 
