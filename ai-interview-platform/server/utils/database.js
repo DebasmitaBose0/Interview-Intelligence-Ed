@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+const logger = require('../services/logger');
+const queryProfiler = require('../services/queryProfiler');
+const { ensureIndexes } = require('./indexManager');
 
 let isConnected = false;
 
@@ -10,7 +13,7 @@ const connectDatabase = async () => {
   }
 
   if (!DB_URI) {
-    console.log('[Database] No MONGO_URI/MONGODB_URI configured. Operating in stateless file-storage mode.');
+    logger.info('No MONGO_URI/MONGODB_URI configured. Operating in stateless file-storage mode.');
     return;
   }
 
@@ -23,7 +26,7 @@ const connectDatabase = async () => {
     });
 
     isConnected = true;
-    console.log(`[Database] MongoDB connected: ${conn.connection.host}`);
+    logger.info(`MongoDB connected: ${conn.connection.host}`);
 
     const { runMigrations } = require('../db/migrations/migrationRunner');
     runMigrations().catch(err => {
@@ -31,22 +34,31 @@ const connectDatabase = async () => {
     });
 
     mongoose.connection.on('error', (err) => {
-      console.error('[Database] Connection error:', err.message);
+      logger.error('Database connection error', { error: err.message });
       isConnected = false;
     });
 
     mongoose.connection.on('disconnected', () => {
-      console.warn('[Database] Disconnected from MongoDB');
+      logger.warn('Disconnected from MongoDB');
       isConnected = false;
     });
 
     mongoose.connection.on('reconnected', () => {
-      console.log('[Database] Reconnected to MongoDB');
+      logger.info('Reconnected to MongoDB');
       isConnected = true;
     });
 
+    mongoose.connection.setMaxListeners(20);
+
+    if (process.env.ENABLE_INDEX_CREATION !== 'false') {
+      const indexResults = await ensureIndexes();
+      if (indexResults.created.length > 0) {
+        logger.info(`Database indexes ensured: ${indexResults.created.length} created, ${indexResults.skipped.length} skipped`);
+      }
+    }
+
   } catch (err) {
-    console.warn(`[Database] Could not connect to MongoDB (${err.message}). Operating in stateless file-storage mode.`);
+    logger.error('Could not connect to MongoDB', { error: err.message });
     isConnected = false;
   }
 };
@@ -58,9 +70,9 @@ const disconnectDatabase = async () => {
   try {
     await mongoose.disconnect();
     isConnected = false;
-    console.log('[Database] Disconnected gracefully.');
+    logger.info('Disconnected from MongoDB gracefully.');
   } catch (err) {
-    console.error('[Database] Error during disconnect:', err.message);
+    logger.error('Error during disconnect', { error: err.message });
   }
 };
 
