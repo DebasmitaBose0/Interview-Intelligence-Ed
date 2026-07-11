@@ -29,7 +29,6 @@ router.post('/answer', protect, submitAnswerValidator, validate, interviewContro
 router.post('/follow-up', protect, followUpValidator, validate, interviewController.submitAnswerAndGenerateFollowUp);
 // Secure all interview routing vectors using JWT protect middleware.
 // Cache headers are dynamically managed at the controller or CDN level.
-router.post('/start', protect, guardScheduleAccess, interviewController.startInterview);
 router.post('/start', protect, guardInterviewAccess, interviewController.startInterview);
 router.post('/answer', protect, interviewController.submitAnswer);
 router.post('/follow-up', protect, interviewController.submitAnswerAndGenerateFollowUp);
