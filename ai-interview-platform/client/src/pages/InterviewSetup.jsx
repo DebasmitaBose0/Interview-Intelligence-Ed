@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
+// QuestionInputCard provides custom telemetry inputs for question setup
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
 import { sanitizeForDisplay } from '../utils/security';
 import { useToast } from '../components/Common/ToastProvider';
