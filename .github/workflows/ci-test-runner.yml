@@ -1,0 +1,125 @@
+name: CI Test Runner
+
+on:
+  push:
+    branches: [ master, 'feature/**', 'fix/**', 'refactor/**' ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  server-tests:
+    name: Server Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-interview-platform
+
+    services:
+      mongodb:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ai-interview-platform/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Server Tests
+        run: npm test
+        env:
+          NODE_ENV: test
+          MONGO_URI: mongodb://localhost:27017/test
+          JWT_SECRET: test-secret
+          GEMINI_API_KEY: test-key
+          STORAGE_PROVIDER: memory
+
+  client-tests:
+    name: Client Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-interview-platform/client
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ai-interview-platform/client/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Client Tests
+        run: npm test -- --watchAll=false
+        env:
+          CI: true
+
+  env-validation:
+    name: Environment Configuration Validation
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-interview-platform
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: ai-interview-platform/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Environment Configuration
+        run: npm run validate-env
+        env:
+          NODE_ENV: test
+          MONGO_URI: mongodb://localhost:27017/test
+          JWT_SECRET: test-secret
+          GEMINI_API_KEY: test-key
+          STORAGE_PROVIDER: memory
+
+  hygiene:
+    name: Repository Hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for Backup Controller Files
+        run: |
+          if find . -name "*old_controller*" | grep -q .; then
+            echo "::error::Found backup old_controller files. Clean them up."
+            exit 1
+          fi
+
+      - name: Check for Stray PDF Uploads
+        run: |
+          if find . -path "*/uploads/*.pdf" | grep -q .; then
+            echo "::error::Found PDF files in upload folders. Ensure they are gitignored."
+            exit 1
+          fi
+
+      - name: Validate Workflow Directory Structure
+        run: |
+          if [ -d "ai-interview-platform/.github/workflows" ]; then
+            echo "::error::CI workflow files found in ai-interview-platform/.github/workflows/. All workflows must reside in the root .github/workflows/."
+            exit 1
+          fi
+          echo "Workflow directory structure is valid."

@@ -148,9 +148,10 @@ npm test
    - Complete checklist
 
 3. **Ensure CI passes**
-   - All tests pass
+   - All tests pass (`.github/workflows/ci-test-runner.yml`)
    - No lint errors
    - Build succeeds
+   - Hygiene checks pass (no backup files, no stray PDFs, workflows in correct `.github/` directory)
 
 4. **Request review**
    - Tag relevant maintainers
@@ -179,6 +180,10 @@ npm test
 
 ```
 Interview-Intelligence-/
+├── .github/               # GitHub workflows, issue/PR templates
+│   └── workflows/
+│       ├── ci-test-runner.yml    # Automated test & hygiene pipeline
+│       └── labeler.yml           # Auto-label issues and PRs
 ├── ai-interview-platform/
 │   ├── client/           # React frontend
 │   │   ├── src/
@@ -187,14 +192,15 @@ Interview-Intelligence-/
 │   │   │   ├── pages/
 │   │   │   └── services/
 │   │   └── package.json
-│   └── server/           # Node.js backend
-│       ├── controllers/
-│       ├── middleware/
-│       ├── models/
-│       ├── routes/
-│       ├── services/
-│       └── package.json
-└── docs/                 # Documentation
+│   ├── server/           # Node.js backend
+│   │   ├── controllers/
+│   │   ├── middleware/
+│   │   ├── models/
+│   │   ├── routes/
+│   │   ├── services/
+│   │   └── package.json
+│   └── docs/             # Project documentation
+└── README.md
 ```
 
 ## Getting Help

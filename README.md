@@ -1,5 +1,7 @@
 # 🤖 Interview Intelligence — AI Mock Interview & Proctoring Platform
 
+[![CI Test Runner](https://github.com/souma9830/Interview-Intelligence-/actions/workflows/ci-test-runner.yml/badge.svg)](https://github.com/souma9830/Interview-Intelligence-/actions/workflows/ci-test-runner.yml)
+
 An advanced, open-source mock interview platform that simulates real-world hiring rounds with AI-generated, resume-specific questions, live coding sandboxes, performance analytics, and anti-cheating telemetry.
 
 Interview Intelligence acts as a stateless, high-fidelity assessment tool designed to help developers practice technical, behavioral, and coding interviews while providing admins with detailed compliance and performance tracking.
@@ -134,7 +136,7 @@ To ensure smooth testing without consuming Gemini or JDoodle API quotas:
 
 ## 🧼 Repository Hygiene & Validation
 
-We maintain strict clean branch practices. Automated workflows validate that no temporary back-ups (like `old_controller`), un-ignored build artifacts, or client resume uploads (.pdf) are checked into source control. Always verify files with `git status` before committing.
+We maintain strict clean branch practices. Automated workflows (`.github/workflows/ci-test-runner.yml`) validate that no temporary back-ups (like `old_controller`), un-ignored build artifacts, client resume uploads (.pdf), or misplaced CI workflow directories are checked into source control. Always verify files with `git status` before committing.
 
 ---
 
