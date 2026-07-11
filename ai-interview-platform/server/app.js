@@ -12,10 +12,10 @@ const requestLogger = require('./middleware/logging/requestLogger');
 const { securityHeaders } = require('./middleware/securityHeaders');
 const { sanitizeMiddleware } = require('./middleware/sanitizeMiddleware');
 const { apiVersioning } = require('./middleware/apiVersion');
-
 const { globalErrorHandler, notFoundHandler } = require('./middleware/error/errorHandler');
 const configCheck = require('./utils/configCheck');
 const logger = require('./services/logger');
+const { CSP_DIRECTIVES, corsConfig, buildCSPString } = require('./config/securityConfig');
 
 const configStatus = configCheck.check();
 if (!configStatus.valid) {
@@ -30,28 +30,15 @@ if (!process.env.JWT_SECRET) {
   logger.warn('JWT_SECRET environment variable is missing. Using default signing key.');
 }
 
-const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:5173', 'http://localhost:3000'];
-
-const corsOptions = {
-  origin: function (origin, callback) {
-    if (!origin || ALLOWED_ORIGINS.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      logger.warn('Blocked request from origin', { origin });
-      callback(null, false);
-    }
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: CSP_DIRECTIVES,
   },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-};
-
-// Load security middlewares, including route-level request rate limiters
-app.use(helmet());
+  crossOriginEmbedderPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
 app.use(securityHeaders);
-app.use(cors(corsOptions));
+app.use(cors(corsConfig));
 app.use(requestLogger);
 app.use(apiVersioning);
 app.use(express.json({ limit: '10mb' }));
@@ -83,10 +70,18 @@ app.post('/api/csp-violation', express.json({ type: 'application/csp-report' }),
   res.status(204).end();
 });
 
-// Register global error routing bounds
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
-module.exports = app;
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled Promise Rejection', { reason: reason.message || reason, stack: reason.stack });
+});
 
-// Unified error and security logging enabled
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught Exception', { message: error.message, stack: error.stack });
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
+});
+
+module.exports = app;

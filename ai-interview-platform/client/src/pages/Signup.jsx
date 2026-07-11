@@ -5,6 +5,7 @@ import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { useToast } from '../components/Common/ToastProvider';
 import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
 import PasswordStrengthMeter from '../components/Common/PasswordStrengthMeter';
+import { getAriaInvalid, getErrorId } from '../utils/accessibility';
 
 const inp = (err) => ({ width: '100%', background: '#0d0d0d', border: `1px solid ${err ? '#ef4444' : '#2a2a2a'}`, borderRadius: '8px', padding: '10px 12px 10px 38px', fontSize: '14px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box', transition: 'border-color 0.15s' });
 
@@ -41,6 +42,10 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
           body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: name || fbUser.displayName })
         });
       } catch {}
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name, email: fbUser.email, firebaseUid: fbUser.uid })
         });
@@ -80,6 +85,10 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
           body: JSON.stringify({ uid: fbUser.uid, email: fbUser.email, name: fbUser.displayName })
         });
       } catch {}
+
+      try {
+        await fetch('/api/auth/sync-user', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ name: fbUser.displayName, email: fbUser.email, firebaseUid: fbUser.uid })
         });
@@ -108,34 +117,34 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Full name</label>
+            <label htmlFor="signup-name" style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Full name</label>
             <div style={{ position: 'relative' }}>
-              <User size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type="text" placeholder="Your name" value={name} onChange={e => { setName(e.target.value); clearError('name'); }} style={inp(errors.name)} />
+              <User size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} aria-hidden="true" />
+              <input id="signup-name" type="text" placeholder="Your name" value={name} onChange={e => { setName(e.target.value); clearError('name'); }} style={inp(errors.name)} aria-invalid={getAriaInvalid(errors.name)} aria-describedby={errors.name ? getErrorId('name') : undefined} />
             </div>
-            {errors.name && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.name}</p>}
+            {errors.name && <p id={getErrorId('name')} style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }} role="alert">{errors.name}</p>}
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Email address</label>
+            <label htmlFor="signup-email" style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Email address</label>
             <div style={{ position: 'relative' }}>
-              <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} />
+              <Mail size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} aria-hidden="true" />
+              <input id="signup-email" type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} aria-invalid={getAriaInvalid(errors.email)} aria-describedby={errors.email ? getErrorId('email') : undefined} />
             </div>
-            {errors.email && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.email}</p>}
+            {errors.email && <p id={getErrorId('email')} style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }} role="alert">{errors.email}</p>}
           </div>
 
           <div>
-            <label style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Password</label>
+            <label htmlFor="signup-password" style={{ fontSize: '12px', fontWeight: '500', color: '#888', display: 'block', marginBottom: '6px' }}>Password</label>
             <div style={{ position: 'relative' }}>
-              <Lock size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} />
-              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
-              <button type="button" onClick={() => setShow(!show)} style={{ position: 'absolute', right: '10px', top: '9px', background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px' }}>
-                {show ? <EyeOff size={15} /> : <Eye size={15} />}
+              <Lock size={15} color="#555" style={{ position: 'absolute', left: '11px', top: '11px' }} aria-hidden="true" />
+              <input id="signup-password" type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} aria-invalid={getAriaInvalid(errors.password)} aria-describedby={errors.password ? getErrorId('password') : undefined} />
+              <button type="button" onClick={() => setShow(!show)} style={{ position: 'absolute', right: '10px', top: '9px', background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px' }} aria-label={show ? 'Hide password' : 'Show password'}>
+                {show ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
               </button>
             </div>
             <PasswordStrengthMeter password={password} />
-            {errors.password && <p style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }}>{errors.password}</p>}
+            {errors.password && <p id={getErrorId('password')} style={{ fontSize: '12px', color: '#ef4444', margin: '4px 0 0' }} role="alert">{errors.password}</p>}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary" style={{ marginTop: '8px', width: '100%', padding: '11px', background: loading ? '#1a1a1a' : '#fff', color: loading ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.15s' }}>

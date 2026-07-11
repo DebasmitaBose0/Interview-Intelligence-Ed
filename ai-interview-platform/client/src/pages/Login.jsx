@@ -5,6 +5,7 @@ import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { sendPasswordReset } from '../services/auth';
 import { useToast } from '../components/Common/ToastProvider';
 import { useFormValidation, validators, createField } from '../hooks/useFormValidation';
+import { announceToScreenReader, getAriaInvalid, getErrorId } from '../utils/accessibility';
 
 // Consumer of password strength indicators in related authentication pages
 const card = {
@@ -262,29 +263,29 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           <div>
-            <label style={label}>Email address</label>
+            <label htmlFor="login-email" style={label}>Email address</label>
             <div style={inputGroup}>
-              <Mail size={15} color="#555" style={iconPosition} />
-              <input type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} />
+              <Mail size={15} color="#555" style={iconPosition} aria-hidden="true" />
+              <input id="login-email" type="email" placeholder="you@example.com" value={email} onChange={e => { setEmail(e.target.value); clearError('email'); }} style={inp(errors.email)} aria-invalid={getAriaInvalid(errors.email)} aria-describedby={errors.email ? getErrorId('email') : undefined} />
             </div>
-            {errors.email && <p style={inputError}>{errors.email}</p>}
+            {errors.email && <p id={getErrorId('email')} style={inputError} role="alert">{errors.email}</p>}
           </div>
 
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={label}>Password</label>
+              <label htmlFor="login-password" style={label}>Password</label>
               <button type="button" onClick={() => setCurrentTab('forgot-password')} style={toggleLink}>
                 Forgot password?
               </button>
             </div>
             <div style={inputGroup}>
-              <Lock size={15} color="#555" style={iconPosition} />
-              <input type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} />
-              <button type="button" onClick={() => setShow(!show)} style={showPasswordBtn}>
-                {show ? <EyeOff size={15} /> : <Eye size={15} />}
+              <Lock size={15} color="#555" style={iconPosition} aria-hidden="true" />
+              <input id="login-password" type={show ? 'text' : 'password'} placeholder="••••••••" value={password} onChange={e => { setPassword(e.target.value); clearError('password'); }} style={{ ...inp(errors.password), paddingRight: '38px' }} aria-invalid={getAriaInvalid(errors.password)} aria-describedby={errors.password ? getErrorId('password') : undefined} />
+              <button type="button" onClick={() => setShow(!show)} style={showPasswordBtn} aria-label={show ? 'Hide password' : 'Show password'}>
+                {show ? <EyeOff size={15} aria-hidden="true" /> : <Eye size={15} aria-hidden="true" />}
               </button>
             </div>
-            {errors.password && <p style={inputError}>{errors.password}</p>}
+            {errors.password && <p id={getErrorId('password')} style={inputError} role="alert">{errors.password}</p>}
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary" style={btnPrimary(loading, false)}>
