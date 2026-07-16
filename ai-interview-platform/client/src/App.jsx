@@ -145,4 +145,4 @@ export default function App() {
   );
 }
 
-// TODO: Issue 246 Accessibility improvements
+// TODO: Issue 245 Resume skill gap analysis
