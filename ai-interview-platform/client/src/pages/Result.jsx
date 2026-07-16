@@ -20,6 +20,39 @@ const normalizeReportScores = (report = {}) => ({
   codingScore: normalizeScore(report.codingScore),
 });
 
+/**
+ * Returns a color based on score thresholds for visual progress bars.
+ * >= 80: green (strong), >= 60: yellow (moderate), < 60: red (needs work)
+ */
+const getScoreColor = (score) => {
+  if (score >= 80) return '#4ade80';  // green
+  if (score >= 60) return '#facc15';  // yellow
+  return '#f87171';                   // red
+};
+
+/**
+ * Renders an animated horizontal progress bar for a given score metric.
+ */
+const ScoreBar = ({ label, score, icon: Icon }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <span style={{ fontSize: '12px', fontWeight: '500', color: '#aaa', display: 'flex', alignItems: 'center', gap: '6px' }}>
+        {Icon && <Icon size={12} />} {label}
+      </span>
+      <span style={{ fontSize: '13px', fontWeight: '700', color: getScoreColor(score) }}>{score}%</span>
+    </div>
+    <div style={{ width: '100%', height: '6px', background: '#1e1e1e', borderRadius: '3px', overflow: 'hidden' }}>
+      <div style={{
+        height: '100%',
+        width: `${score}%`,
+        background: `linear-gradient(90deg, ${getScoreColor(score)}88, ${getScoreColor(score)})`,
+        borderRadius: '3px',
+        transition: 'width 1s ease-out',
+      }} />
+    </div>
+  </div>
+);
+
 export default function Result({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
   const experience = globalState.experience || 'Mid-level (2-5 yrs)';
