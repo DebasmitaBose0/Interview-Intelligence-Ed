@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
+import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle, Clock } from 'lucide-react';
 import VideoRecorder from '../components/Telemetry/VideoRecorder';
 import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
@@ -9,6 +9,8 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
   const selectedRole = globalState.role || 'Frontend Engineer';
   const interviewId = globalState.interviewId || 'demo_session_active';
   const { isOnline } = useProctorOffline();
+  // Track whether all session prerequisites are met for a cleaner UI gate
+  const [isSessionReady, setIsSessionReady] = useState(false);
 
   // Redirect if no resume uploaded
   useEffect(() => {
@@ -32,9 +34,13 @@ export default function InterviewSession({ globalState, setGlobalState, setCurre
           return;
         }
       }
+      setIsSessionReady(true);
+      // Announce to screen readers that the session is ready
+      const liveRegion = document.getElementById('session-status-announce');
+      if (liveRegion) liveRegion.textContent = `Interview session ready for ${selectedRole} role.`;
     };
     verifyAccess();
-  }, [globalState.resumeUploaded, setCurrentTab]);
+  }, [globalState.resumeUploaded, setCurrentTab, selectedRole]);
 
   // Initialize telemetry logs
   useEffect(() => {
