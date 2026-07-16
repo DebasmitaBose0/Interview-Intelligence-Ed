@@ -295,6 +295,24 @@ Respond ONLY with a valid raw JSON object. Replace the bracketed text with your 
  */
 const evaluateAnswer = async ({ question, candidateAnswer, role, category }) => {
   console.log(`[Gemini] Evaluating candidate answer for category: ${category}...`);
+
+  // Input sanitization — catch blank/null answers before hitting the API
+  const trimmedAnswer = (candidateAnswer || '').trim();
+  const FILLER_REGEX = /^(hi|hello|hey|ok|yes|no|pass|nothing|skip|idk|i don't know|good question|thanks|thank you)[\s.!]*$/i;
+  if (!trimmedAnswer || trimmedAnswer.length < 10 || FILLER_REGEX.test(trimmedAnswer)) {
+    console.log(`[Gemini] Trivial/empty answer detected — auto-scoring 0.`);
+    return {
+      success: true,
+      score: 0,
+      verdict: 'Poor',
+      strengths: [],
+      improvements: ['Provide a substantive answer to receive a meaningful score.'],
+      missedPoints: ['No relevant technical content detected.'],
+      modelAnswer: 'A complete, relevant answer addressing the core concepts of the question.',
+      feedback: 'Your response was too short or not related to the question. Please attempt a proper answer.',
+    };
+  }
+
   const model = getModel();
 
   const prompt = `
@@ -303,7 +321,7 @@ You are an extremely strict senior technical interviewer evaluating a candidate'
 Role Being Interviewed For: ${role}
 Question Category: ${category}
 Interview Question: "${question}"
-Candidate's Answer: "${candidateAnswer}"
+Candidate's Answer: "${trimmedAnswer}"
 
 Evaluate this answer with ZERO leniency.
 
@@ -349,11 +367,16 @@ CRITICAL RULES:
     let rawText = result.response.text().trim();
     const data = parseGeminiJson(rawText);
     data.score = parseScoreSafe(data.score, 0, 10);
+    // Validate verdict enum — fallback if Gemini returns an unexpected value
+    const validVerdicts = ['Excellent', 'Good', 'Average', 'Needs Improvement', 'Poor'];
+    if (!validVerdicts.includes(data.verdict)) {
+      data.verdict = data.score >= 8 ? 'Excellent' : data.score >= 6 ? 'Good' : data.score >= 4 ? 'Average' : data.score >= 2 ? 'Needs Improvement' : 'Poor';
+    }
     console.log(`[Gemini] Answer evaluated. Score: ${data.score}/10, Verdict: ${data.verdict}`);
     return { success: true, ...data };
   } catch (err) {
     console.error('[Gemini] Answer evaluation failed:', err.message);
-    const wordCount = (candidateAnswer || '').split(/\s+/).length;
+    const wordCount = trimmedAnswer.split(/\s+/).length;
     const hasContent = wordCount > 5;
     return {
       success: true,
