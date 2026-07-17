@@ -25,6 +25,7 @@ const Result = lazy(() => import('./pages/Result'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const VerifyOTP = lazy(() => import('./pages/VerifyOTP'));
 const ScheduleInterview = lazy(() => import('./pages/ScheduleInterview'));
+const Bookmarks = lazy(() => import('./pages/Bookmarks'));
 
 function LoadingScreen({ message = 'Loading workspace...' }) {
   return <LoadingOverlay message={message} />;
@@ -113,6 +114,7 @@ export default function App() {
       case TABS.SESSION: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><InterviewSession globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case TABS.CODING: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><CodingTest globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       case TABS.RESULT: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Result globalState={globalState} setGlobalState={setGlobalState} setCurrentTab={setCurrentTab} /></ProtectedRoute>;
+      case TABS.BOOKMARKS: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Bookmarks /></ProtectedRoute>;
       case TABS.ERRORS: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><ErrorDashboard setCurrentTab={setCurrentTab} /></ProtectedRoute>;
       default: return <ProtectedRoute token={token} setCurrentTab={setCurrentTab}><Home setCurrentTab={setCurrentTab} /></ProtectedRoute>;
     }
@@ -145,4 +147,4 @@ export default function App() {
   );
 }
 
-// TODO: Issue 243 Bookmark system
+

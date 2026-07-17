@@ -12,6 +12,7 @@ export const TABS = {
   CODING: 'coding',
   RESULT: 'result',
   ERRORS: 'errors',
+  BOOKMARKS: 'bookmarks',
 };
 
 export const AUTH_TABS = new Set([
@@ -31,6 +32,7 @@ export const PROTECTED_TABS = new Set([
   TABS.CODING,
   TABS.RESULT,
   TABS.ERRORS,
+  TABS.BOOKMARKS,
 ]);
 
 export const VALID_TABS = new Set([...AUTH_TABS, ...PROTECTED_TABS]);

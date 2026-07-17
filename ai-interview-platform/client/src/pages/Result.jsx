@@ -254,6 +254,47 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         </div>
 
       </div>
+      {/* Q&A Review with Bookmarks */}
+      {globalState.interviewQuestions?.length > 0 && (
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+          <span style={{ fontSize: '13px', fontWeight: '600', color: '#ccc', letterSpacing: '0.05em', textTransform: 'uppercase', borderBottom: '1px solid #1e1e1e', paddingBottom: '8px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BookOpen size={16} /> Question Review
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {globalState.interviewQuestions.map((q, idx) => {
+              const qText = typeof q === 'string' ? q : q.question || JSON.stringify(q);
+              return (
+              <div key={idx} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px' }}>
+                  <h4 style={{ fontSize: '14px', color: '#fff', margin: '0 0 8px', lineHeight: '1.5' }}>{qText}</h4>
+                  <button
+                    onClick={() => {
+                      const b = JSON.parse(localStorage.getItem('camsense_bookmarks') || '[]');
+                      if (!b.find(x => x.question === qText)) {
+                        b.push({ id: Date.now() + idx, question: qText, category: selectedRole, date: new Date().toISOString() });
+                        localStorage.setItem('camsense_bookmarks', JSON.stringify(b));
+                        alert('Question bookmarked successfully!');
+                      } else {
+                        alert('Question already bookmarked!');
+                      }
+                    }}
+                    style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#888', padding: '4px' }}
+                    title="Bookmark this question"
+                  >
+                    <BookOpen size={16} />
+                  </button>
+                </div>
+                {globalState.userAnswers?.[idx] && (
+                  <p style={{ fontSize: '13px', color: '#aaa', margin: 0, paddingLeft: '12px', borderLeft: '2px solid #333' }}>
+                    <span style={{ color: '#ccc', fontWeight: '500' }}>Your Answer: </span>
+                    {globalState.userAnswers[idx]}
+                  </p>
+                )}
+              </div>
+            )})}
+          </div>
+        </div>
+      )}
 
       {/* Strengths & Weaknesses */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>

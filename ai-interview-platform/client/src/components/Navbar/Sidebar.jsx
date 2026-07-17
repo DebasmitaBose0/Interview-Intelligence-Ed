@@ -73,6 +73,7 @@ export default function Sidebar({ currentTab, setCurrentTab, user, globalState =
     { id: TABS.SESSION, label: 'AI Mock Session', icon: Mic, disabled: !isSetupDone },
     { id: TABS.CODING, label: 'Coding Test', icon: Code2, disabled: !isSessionDone },
     { id: TABS.RESULT, label: 'Results', icon: Award, disabled: !isCodingDone },
+    { id: TABS.BOOKMARKS, label: 'Bookmarks', icon: FileText, disabled: false },
   ];
 
   const name = user?.name || 'Candidate';
