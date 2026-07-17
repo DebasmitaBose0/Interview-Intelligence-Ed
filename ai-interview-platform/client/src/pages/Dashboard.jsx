@@ -5,6 +5,7 @@ import { useFetch } from '../hooks/useFetch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { SkeletonCard, SkeletonStatCard } from '../components/Common/Skeleton';
 import EmptyState from '../components/Common/EmptyState';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -217,12 +218,10 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {(() => {
-                const start = (schedulePage - 1) * ITEMS_PER_PAGE;
-                return schedules.slice(start, start + ITEMS_PER_PAGE).map(schedule => {
-                  const status = getScheduleStatus(schedule);
-                  const isLocked = status.label === 'Upcoming';
-                  return (
+              {schedules.slice((schedulePage - 1) * ITEMS_PER_PAGE, schedulePage * ITEMS_PER_PAGE).map(schedule => {
+                const status = getScheduleStatus(schedule);
+                const isLocked = status.label === 'Upcoming';
+                return (
                   <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
@@ -246,14 +245,6 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                     <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                       <button
                         disabled={isLocked}
-                  const isFuture = new Date(schedule.scheduledAt).getTime() > Date.now();
-                  return (
-                    <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                      <span style={{ fontSize: '11px', color: '#aaa' }}>{new Date(schedule.scheduledAt).toLocaleString()} &bull; {schedule.durationMinutes} min</span>
-                      {schedule.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>}
-                      <button
-                        disabled={isFuture}
                         onClick={() => {
                           setGlobalState(prev => ({ ...prev, role: schedule.role }));
                           setCurrentTab('setup');
@@ -273,33 +264,41 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
                   </div>
                 );
               })}
-              </div>
-            )}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-              {schedules.length > ITEMS_PER_PAGE && (
-                <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
-              )}
-              <button
-                onClick={() => setCurrentTab('schedule')}
-                style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
-              >
-                View All <ExternalLink size={10} />
-              </button>
-                          marginTop: '8px', padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none', cursor: isFuture ? 'not-allowed' : 'pointer',
-                          background: isFuture ? '#1a1a1a' : '#fff',
-                          color: isFuture ? '#555' : '#000',
-                          fontWeight: '600', transition: 'all 0.15s',
-                        }}
-                      >
-                        {isFuture ? 'Starts later' : 'Start Session'}
-                      </button>
-                    </div>
-                  );
-                });
-              })()}
             </div>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            {schedules.length > ITEMS_PER_PAGE && (
+              <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
+            )}
+            <button
+              onClick={() => setCurrentTab('schedule')}
+              style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
+            >
+              View All <ExternalLink size={10} />
+            </button>
           </div>
+        </div>
       </div>
+
+      {reports.length > 0 && (
+        <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: '600', color: '#fff', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <BarChart2 size={16} color="#888" /> Performance Analytics
+          </h2>
+          <div style={{ height: '300px', width: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={reports.slice().reverse()} margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#222" />
+                <XAxis dataKey="role" stroke="#888" fontSize={11} />
+                <YAxis stroke="#888" fontSize={11} domain={[0, 100]} />
+                <RechartsTooltip contentStyle={{ background: '#000', border: '1px solid #333', borderRadius: '8px' }} />
+                <Line type="monotone" dataKey="overallScore" name="Overall Score" stroke="#fff" strokeWidth={2} dot={{ r: 4, fill: '#fff' }} />
+                <Line type="monotone" dataKey="technicalScore" name="Tech Score" stroke="#4ade80" strokeWidth={2} dot={{ r: 3, fill: '#4ade80' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
       {reports.length === 0 ? (
         <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '48px', textAlign: 'center' }}>

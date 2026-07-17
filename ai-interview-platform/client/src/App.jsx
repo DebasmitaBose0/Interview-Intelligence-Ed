@@ -145,4 +145,3 @@ export default function App() {
   );
 }
 
-// TODO: Issue 239 Performance analytics
