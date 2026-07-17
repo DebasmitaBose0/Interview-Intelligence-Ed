@@ -5,6 +5,7 @@ import { useFetch } from '../hooks/useFetch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { SkeletonCard, SkeletonStatCard } from '../components/Common/Skeleton';
 import EmptyState from '../components/Common/EmptyState';
+import CompareModal from '../components/CompareModal';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -58,6 +59,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reportPage, setReportPage] = useState(1);
   const [schedulePage, setSchedulePage] = useState(1);
   const [deletingSchedule, setDeletingSchedule] = useState(null);
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   const { data, loading, error: fetchError, execute: refetchData } = useFetch(fetchDashboardData, true);
 
@@ -178,12 +180,22 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
 
       
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Performance Dashboard</h1>
-        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
-          Monitor your assessment attempts, skill improvements, and hiring readiness reports.
-        </p>
+      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Performance Dashboard</h1>
+          <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
+            Monitor your assessment attempts, skill improvements, and hiring readiness reports.
+          </p>
+        </div>
+        <button
+          onClick={() => setCompareModalOpen(true)}
+          style={{ padding: '10px 16px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'opacity 0.2s' }}
+        >
+          Compare Attempts
+        </button>
       </div>
+
+      <CompareModal open={compareModalOpen} onClose={() => setCompareModalOpen(false)} schedules={schedules} />
 
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
         <form onSubmit={handleCreateSchedule} style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
