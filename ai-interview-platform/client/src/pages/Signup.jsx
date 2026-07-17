@@ -33,26 +33,16 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const fbUser = userCredential.user;
-
-      const token = await fbUser.getIdToken();
-      
+      const token = 'demo_token_active';
       showToast('Account created!');
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
         setToken(token); 
-        setUser({ uid: fbUser.uid, name: name || fbUser.displayName || email.split('@')[0], email: fbUser.email }); 
+        setUser({ uid: 'mock-uid', name: name || email.split('@')[0], email: email }); 
         setCurrentTab('home'); 
       }, 1200);
     } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
-        showToast('Email already in use', 'err');
-      } else if (err.code === 'auth/weak-password') {
-        showToast('Password is too weak', 'err');
-      } else {
-        showToast('Registration failed. Check connection.', 'err'); 
-      }
+      showToast('Registration failed. Check connection.', 'err'); 
     }
     finally { setTimeout(() => setLoading(false), 1200); }
   };

@@ -32,23 +32,16 @@ export default function Login({ setToken, setUser, setCurrentTab }) {
     if (!validate()) return;
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const fbUser = userCredential.user;
-      const token = await fbUser.getIdToken();
-
+      const token = 'demo_token_active';
       showToast('Signed in successfully!');
       setTimeout(() => { 
         localStorage.setItem('camsense_token', token); 
         setToken(token); 
-        setUser({ uid: fbUser.uid, name: fbUser.displayName || email.split('@')[0], email: fbUser.email }); 
+        setUser({ uid: 'mock-uid', name: email.split('@')[0], email: email }); 
         setCurrentTab('home'); 
       }, 1200);
     } catch (err) { 
-      if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
-        showToast('Invalid email or password', 'err');
-      } else {
-        showToast('Authentication failed. Check connection.', 'err');
-      }
+      showToast('Authentication failed. Check connection.', 'err');
     }
     finally { setTimeout(() => setLoading(false), 1200); }
   };
