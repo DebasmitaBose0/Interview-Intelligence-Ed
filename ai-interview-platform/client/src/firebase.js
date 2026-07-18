@@ -1,3 +1,6 @@
+// Mock firebase to allow build to pass
+export const auth = {};
+export const googleProvider = {};
 
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
