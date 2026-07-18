@@ -1,29 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Trash2, Plus, Loader2, ArrowLeft } from 'lucide-react';
-import { useToast } from '../components/Common/ToastProvider';
-
-const inp = { width: '100%', background: '#0d0d0d', border: '1px solid #2a2a2a', borderRadius: '8px', padding: '10px 12px', fontSize: '13px', color: '#e0e0e0', outline: 'none', fontFamily: 'Inter, sans-serif', boxSizing: 'border-box' };
-
-export default function ScheduleInterview({ setCurrentTab }) {
-  const [schedules, setSchedules] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [form, setForm] = useState({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
-  const [creating, setCreating] = useState(false);
-  const [deleting, setDeleting] = useState(null);
-  const { addToast } = useToast();
-
-  const fetchSchedules = async () => {
-    try {
-      const token = localStorage.getItem('camsense_token');
-      const res = await fetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` } });
-      const json = await res.json();
-      if (json.success) {
-        setSchedules(Array.isArray(json.data) ? json.data : []);
-      }
-    } catch {
-      setError('Failed to load schedules');
-import { Calendar, Clock, Loader2, ChevronRight, Briefcase, Plus, Trash2, ArrowLeft } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, Loader2, Briefcase, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../components/Common/ToastProvider';
 
 const card = { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px' };
@@ -40,21 +16,15 @@ export default function ScheduleInterview({ setCurrentTab }) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchSchedules();
-  }, []);
+  useEffect(() => { fetchSchedules(); }, []);
 
   const fetchSchedules = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('camsense_token');
-      const res = await fetch('/api/schedules', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
-      if (json.success) {
-        setSchedules(json.data || []);
-      }
+      if (json.success) setSchedules(json.data || []);
     } catch (err) {
       console.warn('Failed to fetch schedules:', err);
     } finally {
@@ -62,42 +32,15 @@ export default function ScheduleInterview({ setCurrentTab }) {
     }
   };
 
-  useEffect(() => { fetchSchedules(); }, []);
-
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!form.scheduledAt) {
-      setError('Please select a date and time');
-      return;
-    }
-    setCreating(true);
-    setError('');
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    if (!formData.scheduledAt) {
-      toast.show('Please select a date and time', 'error');
-      return;
-    }
+    if (!formData.scheduledAt) { toast.show('Please select a date and time', 'error'); return; }
     setSaving(true);
     try {
       const token = localStorage.getItem('camsense_token');
       const res = await fetch('/api/schedules', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify(form)
-      });
-      const json = await res.json();
-      if (json.success) {
-        addToast('Interview scheduled successfully!');
-        setForm({ role: 'Frontend Engineer', scheduledAt: '', durationMinutes: 45, notes: '' });
-        fetchSchedules();
-      } else {
-        setError(json.message || 'Failed to create schedule');
-      }
-    } catch {
-      setError('Network error, please try again');
-    } finally {
-      setCreating(false);
         body: JSON.stringify(formData)
       });
       const json = await res.json();
@@ -109,142 +52,24 @@ export default function ScheduleInterview({ setCurrentTab }) {
       } else {
         toast.show(json.message || 'Failed to schedule', 'error');
       }
-    } catch {
-      toast.show('Network error', 'error');
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.show('Network error', 'error'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
-    setDeleting(id);
-    try {
-      const token = localStorage.getItem('camsense_token');
-      const res = await fetch(`/api/schedules/${id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const json = await res.json();
-      if (json.success) {
-        addToast('Schedule deleted');
-        fetchSchedules();
-      } else {
-        setError(json.message || 'Failed to delete schedule');
-      }
-    } catch {
-      setError('Network error, please try again');
-    } finally {
-      setDeleting(null);
-    }
-  };
-
-  const getStatus = (schedule) => {
-    const now = Date.now();
-    const scheduledAt = new Date(schedule.scheduledAt).getTime();
-    const endAt = scheduledAt + (schedule.durationMinutes || 45) * 60 * 1000;
-    if (now > endAt) return { label: 'Completed', color: '#555' };
-    if (now >= scheduledAt) return { label: 'Active Now', color: '#4ade80' };
-    return { label: 'Upcoming', color: '#facc15' };
-  };
-
-  if (loading) {
-    return (
-      <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'Inter, sans-serif', display: 'flex', justifyContent: 'center', padding: '60px' }}>
-        <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} color="#888" />
-      </div>
-    );
-  }
-
-  return (
-    <div style={{ maxWidth: '720px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
-      <div style={{ marginBottom: '24px' }}>
-        <button onClick={() => setCurrentTab('dashboard')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
-          <ArrowLeft size={13} /> Back to Dashboard
-        </button>
-        <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#fff', margin: '0 0 4px' }}>Interview Schedule</h1>
-        <p style={{ fontSize: '13px', color: '#888', margin: 0 }}>Create and manage your mock interview sessions.</p>
-      </div>
-
-      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#fff', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Plus size={14} color="#888" /> New Schedule
-        </h2>
-        <form onSubmit={handleCreate} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))} style={inp}>
-            <option>Frontend Engineer</option>
-            <option>Backend Engineer</option>
-            <option>Fullstack Engineer</option>
-            <option>AI / ML Engineer</option>
-          </select>
-          <input type="datetime-local" value={form.scheduledAt} onChange={e => { setForm(p => ({ ...p, scheduledAt: e.target.value })); setError(''); }} required style={inp} />
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <input type="number" min="15" max="180" value={form.durationMinutes} onChange={e => setForm(p => ({ ...p, durationMinutes: parseInt(e.target.value) || 45 }))} style={{ ...inp, flex: 1 }} placeholder="Duration (min)" />
-          </div>
-          <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} rows={2} placeholder="Preparation notes..." style={{ ...inp, resize: 'none', lineHeight: '1.5' }} />
-          {error && <div style={{ color: '#ef4444', fontSize: '12px' }}>{error}</div>}
-          <button type="submit" disabled={creating} style={{ padding: '10px 14px', background: creating ? '#1a1a1a' : '#fff', color: creating ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-            {creating ? <><Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> Scheduling...</> : <><Plus size={14} /> Schedule Interview</>}
-          </button>
-        </form>
-      </div>
-
-      <div style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px' }}>
-        <h2 style={{ fontSize: '14px', fontWeight: '600', color: '#fff', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <Calendar size={14} color="#888" /> All Schedules ({schedules.length})
-        </h2>
-        {schedules.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '32px', color: '#555', fontSize: '13px' }}>
-            No schedules yet. Create one above.
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {schedules.map(s => {
-              const status = getStatus(s);
-              return (
-                <div key={s._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>{s.role}</span>
-                      <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '11px', color: '#888' }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={10} /> {new Date(s.scheduledAt).toLocaleString()}</span>
-                      <span>•</span>
-                      <span>{s.durationMinutes || 45} min</span>
-                    </div>
-                    {s.notes && <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{s.notes}</span>}
-                  </div>
-                  <button onClick={() => handleDelete(s._id)} disabled={deleting === s._id} style={{ background: 'transparent', border: '1px solid #333', borderRadius: '6px', color: '#ef4444', cursor: 'pointer', padding: '8px', fontSize: '13px', display: 'flex', alignItems: 'center' }}>
-                    {deleting === s._id ? <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={13} />}
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     setDeletingId(id);
     try {
       const token = localStorage.getItem('camsense_token');
       await fetch(`/api/schedules/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       toast.show('Schedule removed', 'success');
       setSchedules(prev => prev.filter(s => s._id !== id));
-    } catch {
-      toast.show('Failed to delete', 'error');
-    } finally {
-      setDeletingId(null);
-    }
+    } catch { toast.show('Failed to delete', 'error'); }
+    finally { setDeletingId(null); }
   };
 
   const formatDate = (dateStr) => {
-    try {
-      return new Date(dateStr).toLocaleString('en-US', {
-        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
+    try { return new Date(dateStr).toLocaleString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch { return dateStr; }
   };
 
   const getMinDateTime = () => {
@@ -260,10 +85,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
           <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: '0 0 6px' }}>Schedule Interview</h1>
           <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>Plan your interview sessions in advance</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{ padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
+        <button onClick={() => setShowForm(!showForm)} style={{ padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Plus size={16} /> {showForm ? 'Cancel' : 'New Schedule'}
         </button>
       </div>
@@ -295,7 +117,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
               </div>
             </div>
             <button type="submit" disabled={saving} style={{ padding: '11px', background: saving ? '#1a1a1a' : '#fff', color: saving ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              {saving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Scheduling…</> : <>Schedule Interview <Calendar size={16} /></>}
+              {saving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Scheduling...</> : <>Schedule Interview <Calendar size={16} /></>}
             </button>
           </form>
         </div>
@@ -305,7 +127,6 @@ export default function ScheduleInterview({ setCurrentTab }) {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
             <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-            <p>Loading schedules...</p>
           </div>
         ) : schedules.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
@@ -316,18 +137,14 @@ export default function ScheduleInterview({ setCurrentTab }) {
           schedules.map(schedule => (
             <div key={schedule._id} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#1a1a1a', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#1a1a1a', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Briefcase size={18} color="#ccc" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{schedule.role}</div>
                   <div style={{ fontSize: '12px', color: '#888', display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Calendar size={12} /> {formatDate(schedule.scheduledAt)}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={12} /> {schedule.durationMinutes || 45} min
-                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} /> {formatDate(schedule.scheduledAt)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {schedule.durationMinutes || 45} min</span>
                   </div>
                   {schedule.notes && <div style={{ fontSize: '12px', color: '#aaa', marginTop: '4px' }}>{schedule.notes}</div>}
                 </div>
@@ -344,10 +161,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
           ))
         )}
       </div>
-
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }
