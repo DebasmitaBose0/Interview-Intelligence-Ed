@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Clock, Loader2, ChevronRight, Briefcase, Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, Loader2, Briefcase, Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { useToast } from '../components/Common/ToastProvider';
 
 const card = { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px' };
@@ -100,6 +101,9 @@ export default function ScheduleInterview({ setCurrentTab }) {
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+      <button onClick={() => setCurrentTab('dashboard')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+        <ArrowLeft size={13} /> Back to Dashboard
+      </button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: '0 0 6px' }}>Schedule Interview</h1>

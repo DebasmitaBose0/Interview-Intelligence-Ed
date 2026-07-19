@@ -95,6 +95,11 @@ export default function Signup({ setToken, setUser, setCurrentTab }) {
       }, 1200);
     } catch (err) {
       console.error('[Signup] Firebase error:', err.code, err.message);
+        setUser({ uid: fbUser.uid, name: name || email.split('@')[0], email: email }); 
+        setCurrentTab('home'); 
+      }, 1200);
+    } catch (err) {
+
       if (err.code === 'auth/email-already-in-use') {
         toast.show('Email already in use. Try logging in instead.', 'error');
       } else if (err.code === 'auth/weak-password') {
