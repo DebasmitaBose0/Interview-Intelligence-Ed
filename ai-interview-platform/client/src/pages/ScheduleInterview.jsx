@@ -80,6 +80,9 @@ export default function ScheduleInterview({ setCurrentTab }) {
 
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
+      <button onClick={() => setCurrentTab('dashboard')} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginBottom: '12px' }}>
+        <ArrowLeft size={13} /> Back to Dashboard
+      </button>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: '0 0 6px' }}>Schedule Interview</h1>
