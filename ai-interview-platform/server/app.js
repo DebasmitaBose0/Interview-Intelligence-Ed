@@ -31,9 +31,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: CSP_DIRECTIVES,
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));

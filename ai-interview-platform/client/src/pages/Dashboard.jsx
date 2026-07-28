@@ -8,6 +8,8 @@ import { Pagination } from '../components/Common/Pagination';
 import { useFetch } from '../hooks/useFetch';
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { SkeletonCard, SkeletonStatCard } from '../components/Common/Skeleton';
+import EmptyState from '../components/Common/EmptyState';
+import CompareModal from '../components/CompareModal';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -65,6 +67,7 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   const [reportPage,   setReportPage]   = useState(1);
   const [schedulePage, setSchedulePage] = useState(1);
   const [deletingSchedule, setDeletingSchedule] = useState(null);
+  const [compareModalOpen, setCompareModalOpen] = useState(false);
 
   const { data, loading, error: fetchError, execute: refetchData } = useFetch(fetchDashboardData, true);
 
@@ -183,16 +186,24 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
   return (
     <div style={{ maxWidth: '960px', margin: '0 auto', fontFamily: 'Inter, sans-serif' }}>
 
-      <div style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>
-          Performance Dashboard
-        </h1>
-        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
-          Monitor your assessment attempts, skill improvements, and hiring readiness reports.
-        </p>
+      
+      <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', letterSpacing: '-0.02em', margin: '0 0 6px' }}>Performance Dashboard</h1>
+          <p style={{ fontSize: '14px', color: '#aaa', lineHeight: '1.6' }}>
+            Monitor your assessment attempts, skill improvements, and hiring readiness reports.
+          </p>
+        </div>
+        <button
+          onClick={() => setCompareModalOpen(true)}
+          style={{ padding: '10px 16px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'opacity 0.2s' }}
+        >
+          Compare Attempts
+        </button>
       </div>
 
-      {/* ── Top row: Schedule form + Upcoming sessions ────────────────── */}
+      <CompareModal open={compareModalOpen} onClose={() => setCompareModalOpen(false)} schedules={schedules} />
+
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
 
         {/* Schedule interview form */}
@@ -264,82 +275,58 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
               No upcoming sessions scheduled yet.
             </div>
           ) : (
-            <>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {schedules
-                  .slice((schedulePage - 1) * ITEMS_PER_PAGE, schedulePage * ITEMS_PER_PAGE)
-                  .map(schedule => {
-                    const status   = getScheduleStatus(schedule);
-                    const isLocked = status.label === 'Upcoming';
-                    return (
-                      <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
-                              <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
-                            </div>
-                            <span style={{ fontSize: '11px', color: '#aaa' }}>
-                              {new Date(schedule.scheduledAt).toLocaleString()} &bull; {schedule.durationMinutes} min
-                            </span>
-                            {schedule.notes && (
-                              <span style={{ fontSize: '11px', color: '#666', lineHeight: '1.4' }}>{schedule.notes}</span>
-                            )}
-                          </div>
-                          <button
-                            onClick={() => handleDeleteSchedule(schedule._id)}
-                            disabled={deletingSchedule === schedule._id}
-                            style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
-                            title="Delete schedule"
-                            aria-label={`Delete schedule for ${schedule.role}`}
-                          >
-                            {deletingSchedule === schedule._id
-                              ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} />
-                              : <Trash2 size={12} />}
-                          </button>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                          <button
-                            disabled={isLocked}
-                            onClick={() => {
-                              setGlobalState(prev => ({ ...prev, role: schedule.role }));
-                              setCurrentTab('setup');
-                            }}
-                            style={{
-                              flex: 1, padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
-                              cursor:     isLocked ? 'not-allowed' : 'pointer',
-                              background: isLocked ? '#1a1a1a' : '#fff',
-                              color:      isLocked ? '#555'     : '#000',
-                              fontWeight: '600', transition: 'all 0.15s',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                            }}
-                          >
-                            {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
-                          </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {schedules.slice((schedulePage - 1) * ITEMS_PER_PAGE, schedulePage * ITEMS_PER_PAGE).map(schedule => {
+                const status = getScheduleStatus(schedule);
+                const isLocked = status.label === 'Upcoming';
+                return (
+                  <div key={schedule._id} style={{ background: '#0d0d0d', border: '1px solid #222', borderRadius: '8px', padding: '12px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#fff' }}>{schedule.role}</span>
+                          <span style={{ fontSize: '10px', color: status.color, fontWeight: '500' }}>{status.label}</span>
                         </div>
                       </div>
-                    );
-                  })}
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
-                {schedules.length > ITEMS_PER_PAGE && (
-                  <Pagination
-                    currentPage={schedulePage}
-                    totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)}
-                    onPageChange={setSchedulePage}
-                  />
-                )}
-                <button
-                  onClick={() => setCurrentTab('schedule')}
-                  style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
-                >
-                  View All <ExternalLink size={10} />
-                </button>
-              </div>
-            </>
+                      <button
+                        onClick={() => handleDeleteSchedule(schedule._id)}
+                        disabled={deletingSchedule === schedule._id}
+                        style={{ background: 'transparent', border: 'none', color: '#555', cursor: 'pointer', padding: '4px' }}
+                        title="Delete schedule"
+                      >
+                        {deletingSchedule === schedule._id ? <Loader2 size={12} style={{ animation: 'spin 1s linear infinite' }} /> : <Trash2 size={12} />}
+                      </button>
+                    </div>
+                    <button
+                      disabled={isLocked}
+                      onClick={() => { setGlobalState(prev => ({ ...prev, role: schedule.role })); setCurrentTab('setup'); }}
+                      style={{
+                        marginTop: '8px', padding: '6px 12px', fontSize: '11px', borderRadius: '4px', border: 'none',
+                        cursor: isLocked ? 'not-allowed' : 'pointer',
+                        background: isLocked ? '#1a1a1a' : '#fff',
+                        color: isLocked ? '#555' : '#000',
+                        fontWeight: '600', transition: 'all 0.15s',
+                        display: 'flex', alignItems: 'center', gap: '4px'
+                      }}
+                    >
+                      {isLocked ? <><Lock size={10} /> Locked</> : 'Start Session'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
+            {schedules.length > ITEMS_PER_PAGE && (
+              <Pagination currentPage={schedulePage} totalPages={Math.ceil(schedules.length / ITEMS_PER_PAGE)} onPageChange={setSchedulePage} />
+            )}
+            <button
+              onClick={() => setCurrentTab('schedule')}
+              style={{ background: 'transparent', border: 'none', color: '#aaa', cursor: 'pointer', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px', marginLeft: 'auto', textDecoration: 'underline' }}
+            >
+              View All <ExternalLink size={10} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -361,7 +348,6 @@ export default function Dashboard({ setCurrentTab, setGlobalState }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
 
-          {/* Stat cards */}
           <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '16px' }}>
             {[
               { label: 'Interviews Completed', val: stats.total,         icon: FileText,    desc: 'Total sessions completed' },
