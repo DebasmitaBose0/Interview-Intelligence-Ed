@@ -4,7 +4,7 @@ const logger = require('../services/logger');
 const BLOCKED_OPERATORS = ['$where', '$regex', '$gt', '$gte', '$lt', '$lte', '$ne', '$in', '$nin', '$or', '$and', '$nor', '$not', '$elemMatch', '$mod', '$all', '$size', '$exists', '$expr', '$jsonSchema', '$text', '$search'];
 
 const sanitizeMiddleware = mongoSanitize({
-  replaceWith: '_',
+  replaceWith: '_$',
   onSanitize: ({ req, key }) => {
     logger.warn('NoSQL injection attempt blocked', {
       ip: req.ip,
