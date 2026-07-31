@@ -1,23 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { WifiOff } from 'lucide-react';
+import React from 'react';
+import { WifiOff, RefreshCw } from 'lucide-react';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 
 export default function OfflineBanner() {
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const { isOnline, unsyncedCount, isSyncing, syncQueue } = useOfflineSync();
 
-  useEffect(() => {
-    const goOnline = () => setIsOffline(false);
-    const goOffline = () => setIsOffline(true);
-
-    window.addEventListener('online', goOnline);
-    window.addEventListener('offline', goOffline);
-
-    return () => {
-      window.removeEventListener('online', goOnline);
-      window.removeEventListener('offline', goOffline);
-    };
-  }, []);
-
-  if (!isOffline) return null;
+  if (isOnline && unsyncedCount === 0) return null;
 
   return (
     <div style={{
@@ -25,21 +13,46 @@ export default function OfflineBanner() {
       bottom: '16px',
       left: '50%',
       transform: 'translateX(-50%)',
-      background: '#ef4444',
+      background: isOnline ? '#3b82f6' : '#ef4444',
       color: '#fff',
       padding: '10px 20px',
       borderRadius: '30px',
       display: 'flex',
       alignItems: 'center',
-      gap: '8px',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+      gap: '12px',
+      boxShadow: '0 4px 14px rgba(0,0,0,0.5)',
       zIndex: 9999,
       fontFamily: 'Inter, sans-serif',
       fontSize: '13px',
       fontWeight: '500'
     }}>
       <WifiOff size={16} />
-      <span>You are currently offline. Some features may be unavailable.</span>
+      <span>
+        {!isOnline
+          ? 'You are currently offline. Responses will be queued.'
+          : `${unsyncedCount} queued response(s) pending sync.`}
+      </span>
+      {unsyncedCount > 0 && isOnline && (
+        <button
+          onClick={syncQueue}
+          disabled={isSyncing}
+          style={{
+            background: 'rgba(255,255,255,0.2)',
+            border: 'none',
+            color: '#fff',
+            padding: '4px 10px',
+            borderRadius: '12px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          <RefreshCw size={12} className={isSyncing ? 'animate-spin' : ''} />
+          {isSyncing ? 'Syncing...' : 'Sync Now'}
+        </button>
+      )}
     </div>
   );
 }
