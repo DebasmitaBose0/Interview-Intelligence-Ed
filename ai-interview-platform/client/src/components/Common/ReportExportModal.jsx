@@ -1,15 +1,28 @@
 import React from 'react';
-import { Download, FileText, Printer, X, CheckCircle } from 'lucide-react';
+import { Download, FileText, Printer, X, CheckCircle, Table, FileSpreadsheet } from 'lucide-react';
 import Modal from './Modal';
+import { exportReportData } from '../../utils/analyticsExporter';
 
-export default function ReportExportModal({ open, onClose, onDownload, onPrint, downloading, downloaded }) {
+export default function ReportExportModal({ open, onClose, onDownload, onPrint, downloading, downloaded, reportData }) {
+  const handleExportCSV = () => {
+    if (reportData) {
+      exportReportData(reportData, 'csv');
+    }
+  };
+
+  const handleExportJSON = () => {
+    if (reportData) {
+      exportReportData(reportData, 'json');
+    }
+  };
+
   return (
     <Modal
       open={open}
       onClose={onClose}
       title="Export Assessment Report"
-      description="Choose how you would like to export your assessment results."
-      width="440px"
+      description="Choose your preferred export format for candidate evaluation results."
+      width="460px"
       footer={
         <button
           onClick={onClose}
@@ -27,37 +40,71 @@ export default function ReportExportModal({ open, onClose, onDownload, onPrint, 
           onClick={onDownload}
           disabled={downloading}
           style={{
-            display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '10px',
             border: '1px solid #2a2a2a', background: '#0d0d0d', cursor: downloading ? 'not-allowed' : 'pointer',
             color: '#e0e0e0', fontSize: '14px', fontWeight: '500', textAlign: 'left', transition: 'all 0.15s',
             opacity: downloading ? 0.6 : 1,
           }}
         >
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             {downloading ? <X size={18} color="#888" /> : downloaded ? <CheckCircle size={18} color="#4ade80" /> : <Download size={18} color="#ccc" />}
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Download PDF Report</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Download PDF Document</div>
             <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-              {downloading ? 'Compiling PDF document...' : downloaded ? 'Report exported successfully' : 'Comprehensive assessment summary in PDF format'}
+              {downloading ? 'Compiling PDF document...' : downloaded ? 'Report exported successfully' : 'Comprehensive styled PDF summary'}
             </div>
+          </div>
+        </button>
+
+        <button
+          onClick={handleExportCSV}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '10px',
+            border: '1px solid #2a2a2a', background: '#0d0d0d', cursor: 'pointer',
+            color: '#e0e0e0', fontSize: '14px', fontWeight: '500', textAlign: 'left', transition: 'all 0.15s',
+          }}
+        >
+          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <FileSpreadsheet size={18} color="#60a5fa" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Export Spreadsheet (CSV)</div>
+            <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>Tabular dataset for Excel and data analytics</div>
+          </div>
+        </button>
+
+        <button
+          onClick={handleExportJSON}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '10px',
+            border: '1px solid #2a2a2a', background: '#0d0d0d', cursor: 'pointer',
+            color: '#e0e0e0', fontSize: '14px', fontWeight: '500', textAlign: 'left', transition: 'all 0.15s',
+          }}
+        >
+          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <Table size={18} color="#a78bfa" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Export Raw JSON Data</div>
+            <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>Structured JSON payload for API integration</div>
           </div>
         </button>
 
         <button
           onClick={onPrint}
           style={{
-            display: 'flex', alignItems: 'center', gap: '12px', padding: '16px', borderRadius: '10px',
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '14px', borderRadius: '10px',
             border: '1px solid #2a2a2a', background: '#0d0d0d', cursor: 'pointer',
             color: '#e0e0e0', fontSize: '14px', fontWeight: '500', textAlign: 'left', transition: 'all 0.15s',
           }}
         >
-          <div style={{ width: '40px', height: '40px', borderRadius: '8px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <div style={{ width: '38px', height: '38px', borderRadius: '8px', background: '#1a1a1a', border: '1px solid #333', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
             <Printer size={18} color="#ccc" />
           </div>
           <div style={{ flex: 1 }}>
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff' }}>Print Report</div>
-            <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>Send to your connected printer directly</div>
+            <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>Send directly to physical/digital printer</div>
           </div>
         </button>
       </div>
