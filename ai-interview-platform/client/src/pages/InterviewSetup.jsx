@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { UploadCloud, CheckCircle2, ChevronRight, Briefcase, Sparkles, Code, Compass, AlertCircle, GraduationCap, FileText } from 'lucide-react';
 import { useMediaDevices } from '../hooks/useMediaDevices';
 import QuestionInputCard from '../components/Telemetry/QuestionInputCard';
+import QuestionTemplateSelector from '../components/QuestionTemplateSelector';
 import { sanitizeForDisplay } from '../utils/security';
 import { useToast } from '../components/Common/ToastProvider';
 import { LANGUAGE_BOILERPLATES } from '../utils/boilerplates';
