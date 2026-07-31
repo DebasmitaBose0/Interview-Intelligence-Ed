@@ -3,6 +3,7 @@ import { Code2, Terminal, Play, ChevronRight, FileCode, RefreshCw, Mic, MicOff, 
 // Proctoring hook triggers background listeners for window focus checks
 import { useMediaQuery } from '../hooks/useMediaQuery';
 import { useProctor } from '../hooks/useProctor';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 import { LoadingOverlay } from '../components/Common/LoadingOverlay';
 import MonacoEditorWrapper from '../components/Common/MonacoEditorWrapper';
 import Modal from '../components/Common/Modal';
