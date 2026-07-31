@@ -1,5 +1,6 @@
 const SandboxRunner = require('../utils/sandboxRunner');
 const { generateCategorizedQuestions } = require('../services/ollamaService');
+const { compileQuestionPromptTemplate } = require('../utils/questionTemplateEngine');
 const { ApiError } = require('../middleware/error/errorHandler');
 const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
 
@@ -11,7 +12,9 @@ exports.generateQuestion = async (req, res, next) => {
       return sendError(res, 'Please specify target role and experience', 400);
     }
 
-    console.log(`[AI Question Generator] Generating dynamic questions for ${role}`);
+    const templateConfig = compileQuestionPromptTemplate(role, difficulty || 'Medium', resumeSkills || []);
+
+    console.log(`[AI Question Generator] Generating dynamic questions for ${role} with prompt template`);
     const categorizedQuestions = await generateCategorizedQuestions({
       role,
       experience,
@@ -23,6 +26,7 @@ exports.generateQuestion = async (req, res, next) => {
       role,
       difficulty: difficulty || 'Medium',
       experience,
+      templateConfig,
       ...categorizedQuestions
     });
   } catch (error) {
