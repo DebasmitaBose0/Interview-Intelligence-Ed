@@ -3,7 +3,7 @@ import { Video, VideoOff, Square, Play, Download } from 'lucide-react';
 import { getCameraPermission, stopStreamTracks } from '../../utils/mediaUtils';
 import { RECORDING_STATUS, PROCTOR_LABELS } from '../../utils/telemetryConstants';
 
-export default function WebcamStream({ onRecordingComplete, isSessionActive }) {
+export default function WebcamStream({ onRecordingComplete, isSessionActive, onViolation }) {
   const [permission, setPermission] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState(RECORDING_STATUS.IDLE);
   const [stream, setStream] = useState(null);
@@ -55,6 +55,9 @@ export default function WebcamStream({ onRecordingComplete, isSessionActive }) {
         : `Camera error: ${err.message}`;
       setCameraError(msg);
       setPermission(false);
+      if (typeof onViolation === 'function') {
+        onViolation('CAMERA_DISCONNECTED', msg);
+      }
     }
   };
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, Mic, MicOff, Send, RefreshCw, Volume2, Sparkles, ChevronRight, Video, Camera, Play, AlertTriangle } from 'lucide-react';
 import WebcamStream from '../components/Telemetry/WebcamStream';
+import ViolationAlertBanner from '../components/Telemetry/ViolationAlertBanner';
 import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
