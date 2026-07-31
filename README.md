@@ -4,6 +4,12 @@ An advanced, open-source mock interview platform that simulates real-world hirin
 
 Interview Intelligence acts as a stateless, high-fidelity assessment tool designed to help developers practice technical, behavioral, and coding interviews while providing admins with detailed compliance and performance tracking.
 
+## 📚 Documentation & Developer Resources
+
+- 📐 [System Architecture Overview](file:///ai-interview-platform/docs/CLIENT_ARCHITECTURE.md)
+- 🔌 [REST API Specification](file:///ai-interview-platform/docs/API_SPECIFICATION.md)
+- 🛠️ [Developer Setup & Onboarding Guide](file:///ai-interview-platform/docs/DEVELOPER_GUIDE.md)
+
 ---
 
 ## 🌟 Key Features
