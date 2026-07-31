@@ -7,6 +7,7 @@ import Signup from './pages/Signup';
 import Landing from './pages/Landing';
 import { ToastProvider } from './components/Common/ToastProvider';
 import { LoadingOverlay } from './components/Common/LoadingOverlay';
+import CommandPalette from './components/Common/CommandPalette';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { useMediaQuery } from './hooks/useMediaQuery';
 import { useKeyboardShortcuts, useShortcutsDialog } from './hooks/useKeyboardShortcuts';
@@ -170,6 +171,11 @@ export default function App() {
             </Suspense>
           </main>
         </div>
+        <CommandPalette
+          isOpen={isCmdPaletteOpen}
+          onClose={() => setIsCmdPaletteOpen(false)}
+          onSelectTab={setCurrentTab}
+        />
       </div>
     </ToastProvider>
   );

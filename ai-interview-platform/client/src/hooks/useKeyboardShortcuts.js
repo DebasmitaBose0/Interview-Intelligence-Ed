@@ -20,6 +20,15 @@ export function useKeyboardShortcuts(shortcuts = {}, enabled = true) {
     if (!enabled) return;
 
     const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        const cmdKHandler = shortcutsRef.current['k'] || shortcutsRef.current['K'];
+        if (cmdKHandler?.onPress) {
+          e.preventDefault();
+          cmdKHandler.onPress();
+          return;
+        }
+      }
+
       // Do not fire shortcuts when the user is typing into a form control.
       const tag = e.target?.tagName?.toLowerCase();
       if (['input', 'textarea', 'select'].includes(tag)) return;
