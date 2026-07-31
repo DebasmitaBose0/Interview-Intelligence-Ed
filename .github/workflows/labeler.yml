@@ -20,6 +20,9 @@ jobs:
             if (title.includes('bug') || title.includes('fix')) labels.push('bug');
             if (title.includes('feat') || title.includes('enhancement')) labels.push('enhancement');
             if (title.includes('docs') || title.includes('documentation')) labels.push('documentation');
+            if (title.includes('security')) labels.push('security');
+            if (title.includes('perf')) labels.push('performance');
+            if (title.includes('refactor')) labels.push('refactor');
             if (title.includes('elusoc')) labels.push('ELUSoC-2026');
             if (labels.length) {
               await github.rest.issues.addLabels({
@@ -40,6 +43,9 @@ jobs:
             if (title.includes('bug') || title.includes('fix')) labels.push('bug');
             if (title.includes('feat') || title.includes('enhancement')) labels.push('enhancement');
             if (title.includes('docs') || title.includes('documentation')) labels.push('documentation');
+            if (title.includes('security')) labels.push('security');
+            if (title.includes('perf')) labels.push('performance');
+            if (title.includes('refactor')) labels.push('refactor');
             if (labels.length) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,

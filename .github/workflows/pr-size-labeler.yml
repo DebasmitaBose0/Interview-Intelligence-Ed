@@ -1,0 +1,14 @@
+name: PR Size Auto-Labeler
+
+on:
+  pull_request_target:
+    types: [opened, synchronize]
+
+jobs:
+  label-pr-size:
+    name: Auto Label PR Size
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/labeler@v5
+        with:
+          repo-token: "${{ secrets.GITHUB_TOKEN }}"
