@@ -248,6 +248,7 @@ CSS custom properties enable dynamic theming:
 - Integration tests for API calls
 - E2E tests for critical user flows (planned)
 
-## Contributing
+## Contributing & Additional Specs
 
+See [API_SPECIFICATION.md](file:///ai-interview-platform/docs/API_SPECIFICATION.md) for REST API contracts and [DEVELOPER_GUIDE.md](file:///ai-interview-platform/docs/DEVELOPER_GUIDE.md) for local setup instructions.
 See CONTRIBUTING.md for code style guidelines and PR requirements.
