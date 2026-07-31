@@ -372,6 +372,7 @@ The candidate demonstrated robust theoretical scaling mastery. Code sandbox test
         onPrint={handlePrint}
         downloading={downloading}
         downloaded={downloaded}
+        reportData={reportData}
       />
     </div>
   );
