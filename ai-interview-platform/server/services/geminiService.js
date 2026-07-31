@@ -546,11 +546,14 @@ ${pistonError || 'No errors.'}
   }
 };
 
+const aiProviderEngine = require('./aiProviderEngine');
+
 module.exports = {
   extractResumeData,
   analyzeSkillsWithGemini,
   generateQuestionsFromResume,
   evaluateAnswer,
   synthesizeInterviewReport,
-  evaluateCodingSolution
+  evaluateCodingSolution,
+  evaluateWithAIResilience: (primary, secondary) => aiProviderEngine.evaluateWithFallback(primary, secondary)
 };
