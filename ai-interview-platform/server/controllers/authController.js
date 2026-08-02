@@ -33,11 +33,16 @@ exports.getMe = async (req, res, next) => {
 // @access  Private
 exports.logout = async (req, res, next) => {
   try {
+    const { refreshToken } = req.body || {};
+    if (refreshToken) {
+      await RefreshToken.updateOne({ token: refreshToken }, { revoked: true });
+    }
     return sendSuccess(res, null, 200, 'Logged out successfully');
   } catch (error) {
     handleControllerError(res, error, 'Failed to logout');
   }
 };
+
 
 // @desc    Forgot password (Generate OTP)
 // @route   POST /api/auth/forgot-password
