@@ -5,6 +5,7 @@ import RadialProgress from '../components/Common/RadialProgress';
 import PerformanceChart from '../components/Common/PerformanceChart';
 import ReportExportModal from '../components/Common/ReportExportModal';
 import EmptyState from '../components/Common/EmptyState';
+import { generateAssessmentPDF } from '../utils/pdfGenerator';
 import '../styles/printStyles.css';
 
 const normalizeScore = (score, fallback = 0) => {
