@@ -15,13 +15,14 @@ exports.executeCode = async (code, language) => {
       script: code,
       language: language === 'javascript' ? 'nodejs' : language,
       versionIndex: '0'
-    });
+    }, { timeout: 10000 });
     return {
       output: response.data.output,
       statusCode: response.data.statusCode
     };
   } catch (error) {
     console.error('[JDoodle API] execution failed:', error.message);
-    throw new Error('JDoodle API execution failure');
+    throw new Error(`JDoodle API execution failure: ${error.message}`);
   }
 };
+
