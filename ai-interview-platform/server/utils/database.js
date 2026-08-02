@@ -22,7 +22,7 @@ const connectDatabase = async (retryCount = 0) => {
     const conn = await mongoose.connect(DB_URI, connectionOptions);
 
     isConnected = true;
-    logger.info(`MongoDB connected: ${conn.connection.host}`);
+    logger.info(`MongoDB connected: ${conn.connection.host} (Port: ${conn.connection.port || 27017})`);
 
     const { runMigrations } = require('../db/migrations/migrationRunner');
     runMigrations().catch(err => {
