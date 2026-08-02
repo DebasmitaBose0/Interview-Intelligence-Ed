@@ -21,22 +21,29 @@ const ForgotPassword  = lazy(() => import('./pages/ForgotPassword'));
 const VerifyOTP       = lazy(() => import('./pages/VerifyOTP'));
 const ScheduleInterview = lazy(() => import('./pages/ScheduleInterview'));
 
-function LoadingScreen({ message = 'Loading workspace...' }) {
+/**
+ * LoadingScreen Placeholder Component
+ */
+export function LoadingScreen({ message = 'Loading workspace...' }) {
   return <LoadingOverlay message={message} />;
 }
 
-// ------------------------------------------------------------------
-// Lightweight guard wrappers — keep them here so they tree-shake
-// correctly when route-level code-splitting is in place.
-// ------------------------------------------------------------------
-function ProtectedRoute({ token, setCurrentTab, children }) {
+/**
+ * ProtectedRoute Component
+ * Guards authenticated routes, redirecting unauthenticated users to the landing page.
+ */
+export function ProtectedRoute({ token, setCurrentTab, children }) {
   useEffect(() => {
     if (!token) setCurrentTab('landing');
   }, [token, setCurrentTab]);
   return token ? children : null;
 }
 
-function GuestRoute({ token, setCurrentTab, children }) {
+/**
+ * GuestRoute Component
+ * Guards guest-only routes (login, signup, landing), redirecting authenticated users to home.
+ */
+export function GuestRoute({ token, setCurrentTab, children }) {
   useEffect(() => {
     if (token) setCurrentTab('home');
   }, [token, setCurrentTab]);
@@ -50,6 +57,7 @@ export default function App() {
   const [user, setUser]               = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(!!token);
   const [currentTab, setCurrentTab]   = useState(token ? 'home' : 'landing');
+  const [isCmdPaletteOpen, setIsCmdPaletteOpen] = useState(false);
 
   const [globalState, setGlobalState] = useState({
     role:           'Frontend Engineer',
@@ -82,7 +90,8 @@ export default function App() {
     's':      { label: 'Go to Interview Setup',         category: 'Navigation',  onPress: () => navigateTo('setup') },
     'k':      { label: 'Go to Schedule',                category: 'Navigation',  onPress: () => navigateTo('schedule') },
     'r':      { label: 'Go to Results',                 category: 'Navigation',  onPress: () => navigateTo('result') },
-    'Escape': { label: 'Close dialog or cancel',        category: 'General',     onPress: shortcutsDialog.close },
+    'c':      { label: 'Open Command Palette',          category: 'Navigation',  onPress: () => setIsCmdPaletteOpen(true) },
+    'Escape': { label: 'Close dialog or cancel',        category: 'General',     onPress: () => { shortcutsDialog.close(); setIsCmdPaletteOpen(false); } },
   }), [shortcutsDialog, navigateTo]);
 
   // Only register shortcuts when the user is in an authenticated, non-auth page context.
@@ -180,5 +189,3 @@ export default function App() {
     </ToastProvider>
   );
 }
-
-
