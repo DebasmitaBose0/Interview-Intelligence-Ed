@@ -12,7 +12,7 @@ const { sanitizeSandboxScript } = require('./sandboxSanitizer');
  *
  * Removes block comments (/* … *\/) and line comments (// …) from a JS
  * source string before static analysis so that comment-injection evasion
- * attempts such as  require/*payload*/("fs")  are eliminated prior to
+ * attempts such as require("fs") are eliminated prior to
  * regex pattern matching.
  *
  * Strings are intentionally left intact so that string contents do not
