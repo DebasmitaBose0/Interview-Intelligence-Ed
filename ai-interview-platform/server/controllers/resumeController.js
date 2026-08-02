@@ -19,7 +19,7 @@ exports.uploadResume = async (req, res) => {
     }
 
     const { originalname, buffer, mimetype } = uploadedFile;
-    console.log(`[Resume Upload] Received: ${originalname} (${mimetype})`);
+    console.log(`[Resume Upload] Received: ${originalname} (${mimetype}, ${buffer?.length || 0} bytes)`);
 
     let rawText = '';
     try {
