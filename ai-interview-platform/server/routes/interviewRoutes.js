@@ -20,7 +20,7 @@ const {
   followUpValidator,
 } = require('../middleware/validators/interviewValidators');
 
-// Code evaluation and execution routing with sandbox validation middleware
+// Code evaluation and execution routing with sandbox validation and payload standardizers
 // Set up memory storage parser for multer uploads
 const upload = multer({
   storage: multer.memoryStorage(),
