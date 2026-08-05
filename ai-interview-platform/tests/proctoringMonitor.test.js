@@ -22,5 +22,13 @@ describe('Candidate Proctoring Monitor Utility', () => {
     const summary = monitor.getViolationSummary();
     expect(summary.count).toBe(2);
     expect(summary.exceededThreshold).toBe(true);
+    expect(summary.integrityScore).toBe(70);
+  });
+
+  test('calculates integrity score deductions accurately', () => {
+    const monitor = new ProctoringMonitor();
+    expect(monitor.calculateIntegrityScore()).toBe(100);
+    monitor.recordViolation('TAB_SWITCH');
+    expect(monitor.calculateIntegrityScore()).toBe(85);
   });
 });
