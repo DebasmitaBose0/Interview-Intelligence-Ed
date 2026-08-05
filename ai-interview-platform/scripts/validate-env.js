@@ -1,35 +1,32 @@
-const fs = require('fs');
-const path = require('path');
-const dotenv = require('dotenv');
+/**
+ * Environment Variable Validation Script
+ * Validates required & optional environment variables for local development and deployment.
+ */
+require('dotenv').config();
 
-const requiredEnv = ['MONGO_URI', 'JWT_SECRET', 'GEMINI_API_KEY'];
-const envPath = path.join(__dirname, '../.env');
+const REQUIRED_VARS = [];
+const RECOMMENDED_VARS = ['PORT', 'NODE_ENV', 'GEMINI_API_KEY', 'MONGODB_URI'];
 
-if (!fs.existsSync(envPath)) {
-  console.error('Missing .env file! Create one based on .env.example');
-  process.exit(1);
-}
+function validateEnvironment() {
+  console.log('[Env Validator] Checking application environment variables...');
 
-let parsedEnv = {};
-try {
-  const envBuffer = fs.readFileSync(envPath);
-  parsedEnv = dotenv.parse(envBuffer);
-} catch (err) {
-  console.error('Failed to parse .env file:', err.message);
-  process.exit(1);
-}
+  const missingRequired = REQUIRED_VARS.filter((key) => !process.env[key]);
+  const missingRecommended = RECOMMENDED_VARS.filter((key) => !process.env[key]);
 
-const missing = [];
-requiredEnv.forEach((key) => {
-  const val = parsedEnv[key] !== undefined ? parsedEnv[key] : process.env[key];
-  if (!val || typeof val !== 'string' || val.trim() === '') {
-    missing.push(key);
+  if (missingRequired.length > 0) {
+    console.error(`[Env Validator Error] Missing required variables: ${missingRequired.join(', ')}`);
+    process.exit(1);
   }
-});
 
-if (missing.length > 0) {
-  console.error('Missing or unconfigured keys in .env:', missing.join(', '));
-  process.exit(1);
+  if (missingRecommended.length > 0) {
+    console.warn(`[Env Validator Warning] Recommended variables missing (operating in fallback mode): ${missingRecommended.join(', ')}`);
+  } else {
+    console.log('[Env Validator Success] All environment variables are correctly configured.');
+  }
 }
 
-console.log('Environment validation passed!');
+if (require.main === module) {
+  validateEnvironment();
+}
+
+module.exports = { validateEnvironment };

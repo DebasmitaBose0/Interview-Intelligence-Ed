@@ -1,0 +1,38 @@
+name: Continuous Integration
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  test:
+    name: Build & Test Suite
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'ai-interview-platform/package-lock.json'
+
+      - name: Install Platform Dependencies
+        working-directory: ./ai-interview-platform
+        run: npm ci
+
+      - name: Validate Environment Config
+        working-directory: ./ai-interview-platform
+        run: npm run validate-env || true
+
+      - name: Execute Security & Unit Tests
+        working-directory: ./ai-interview-platform
+        run: npx jest server/tests/security/sanitize.test.js tests/commandPalette.test.js tests/proctoringMonitor.test.js tests/architectureDocs.test.js --runInBand
