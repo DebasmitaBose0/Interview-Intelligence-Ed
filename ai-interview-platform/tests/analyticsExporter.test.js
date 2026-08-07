@@ -35,4 +35,10 @@ describe('Interview Analytics Exporter Utility', () => {
     expect(csv).toContain('1,"Technical","Explain Closures in JavaScript",85');
     expect(csv).toContain('2,"Behavioral","Describe a time you solved a conflict",90');
   });
+
+  test('exportToJSON serializes report data accurately', () => {
+    const { exportToJSON } = require('../client/src/utils/analyticsExporter');
+    const json = exportToJSON({ test: true });
+    expect(json).toContain('"test": true');
+  });
 });

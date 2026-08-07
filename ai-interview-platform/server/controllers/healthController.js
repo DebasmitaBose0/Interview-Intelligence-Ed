@@ -8,6 +8,8 @@ exports.getHealthStatus = async (req, res, next) => {
     const dbConnected = isDatabaseConnected();
     const dbLatencyMs = dbConnected ? (Date.now() - startTime) : null;
 
+    const { getDatabaseDiagnostics } = require('../utils/healthDiagnostics');
+    const diagnostics = getDatabaseDiagnostics();
     const health = {
       status: 'healthy',
       uptime: `${process.uptime().toFixed(2)}s`,
@@ -16,7 +18,9 @@ exports.getHealthStatus = async (req, res, next) => {
         connected: dbConnected,
         type: dbConnected ? 'mongodb' : 'file-storage',
         pingLatencyMs: dbLatencyMs,
+        diagnostics: diagnostics.database,
       },
+      systemDiagnostics: diagnostics.system,
       timestamp: new Date().toISOString()
     };
     logger.info('Health check requested', { databaseConnected: dbConnected, pingLatencyMs: dbLatencyMs });

@@ -14,9 +14,9 @@ export default function CommandPalette({ isOpen, onClose, onSelectTab }) {
     { id: 'result', label: 'View Assessment Results', icon: FileText, tab: 'result' }
   ];
 
-  const filteredCommands = commands.filter(cmd =>
-    cmd.label.toLowerCase().includes(query.toLowerCase())
-  );
+  const { DEFAULT_COMMANDS, filterCommands } = require('../../utils/commandRegistry');
+
+  const filteredCommands = filterCommands(DEFAULT_COMMANDS, query);
 
   useEffect(() => {
     setSelectedIndex(0);

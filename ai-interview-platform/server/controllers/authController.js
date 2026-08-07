@@ -37,6 +37,12 @@ exports.logout = async (req, res, next) => {
     if (refreshToken) {
       await RefreshToken.updateOne({ token: refreshToken }, { revoked: true });
     }
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      const tokenBlacklist = require('../utils/tokenBlacklist');
+      tokenBlacklist.add(token);
+    }
     return sendSuccess(res, null, 200, 'Logged out successfully');
   } catch (error) {
     handleControllerError(res, error, 'Failed to logout');

@@ -38,7 +38,8 @@ export default function ThemeToggle({ variant = 'full' }) {
       <button
         onClick={toggleTheme}
         style={iconButton}
-        className="theme-toggle"
+        className="theme-toggle focus:ring-2 focus:ring-indigo-500"
+        aria-pressed={theme === 'dark'}
         aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
       >
         {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}

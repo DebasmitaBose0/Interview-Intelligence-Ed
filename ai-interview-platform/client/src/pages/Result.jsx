@@ -6,6 +6,7 @@ import PerformanceChart from '../components/Common/PerformanceChart';
 import ReportExportModal from '../components/Common/ReportExportModal';
 import EmptyState from '../components/Common/EmptyState';
 import { generateAssessmentPDF } from '../utils/pdfGenerator';
+// Report Export Modal component for CSV/JSON candidate assessment data export
 import '../styles/printStyles.css';
 
 const normalizeScore = (score, fallback = 0) => {

@@ -460,3 +460,10 @@ export function getSupportedLanguages() {
 }
 
 export default LANGUAGE_BOILERPLATES;
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = LANGUAGE_BOILERPLATES;
+  module.exports.getBoilerplate = getBoilerplate;
+  module.exports.getSupportedLanguages = getSupportedLanguages;
+  module.exports.LANGUAGE_BOILERPLATES = LANGUAGE_BOILERPLATES;
+}
