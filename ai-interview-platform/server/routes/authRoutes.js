@@ -21,6 +21,7 @@ const addDeprecationHeaders = (req, res, next) => {
   next();
 };
 
+// Express authentication routes protected by express-validator schemas and rate limits
 router.use(addDeprecationHeaders);
 
 // Stateless authentication endpoints mapping user JWT claims.
@@ -31,16 +32,7 @@ router.post('/logout', protect, authController.logout);
 router.post('/forgot-password', otpLimiter, forgotPasswordValidator, validate, authController.forgotPassword);
 router.post('/verify-otp', otpLimiter, verifyOTPValidator, validate, authController.verifyOTP);
 router.post('/resend-otp', otpLimiter, resendOTPValidator, validate, authController.resendOTP);
-// Password Reset Routes protected by security rate limiters
-router.post('/forgot-password', otpLimiter, authController.forgotPassword);
-router.post('/verify-otp', otpLimiter, authController.verifyOTP);
-router.post('/resend-otp', otpLimiter, authController.resendOTP);
 router.post('/refresh', authController.refreshToken);
 router.post('/sync-user', syncUserValidator, validate, authController.syncUser);
-
-// Sync Firebase user to MongoDB (used after Firebase signup/login)
-router.post('/sync-user', authController.syncUser);
-// Firebase-MongoDB user sync route
-router.post('/sync-user', protect, authController.syncUser);
 
 module.exports = router;

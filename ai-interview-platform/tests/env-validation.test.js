@@ -3,17 +3,18 @@ const fs = require('fs');
 const path = require('path');
 
 describe('Environment Validation Script', () => {
-  it('should be executable', () => {
+  it('should be executable and validate mandatory configuration variables', () => {
     const tempEnvPath = path.join(__dirname, '../.env');
-    fs.writeFileSync(tempEnvPath, 'MONGO_URI=mongodb://localhost:27017/test\nGEMINI_API_KEY=test_key\nJWT_SECRET=test_secret');
-    
+    fs.writeFileSync(tempEnvPath, 'MONGO_URI=mongodb://localhost:27017/test\nGEMINI_API_KEY=test_key\nJWT_SECRET=test_secret\nNODE_ENV=test');
+
     try {
       const out = execSync('node scripts/validate-env.js', {
         env: {
           ...process.env,
           MONGO_URI: 'mongodb://localhost:27017/test',
           GEMINI_API_KEY: 'test_key',
-          JWT_SECRET: 'test_secret'
+          JWT_SECRET: 'test_secret',
+          NODE_ENV: 'test'
         }
       });
       expect(out.toString()).toContain('passed');

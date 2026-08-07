@@ -1,4 +1,4 @@
-const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution } = require('../services/geminiService');
+const { generateQuestionsFromResume, evaluateAnswer, synthesizeInterviewReport, evaluateCodingSolution, evaluateWithAIResilience } = require('../services/geminiService');
 const { parseScoreSafe } = require('../utils/geminiParser');
 const { getStorageAdapter } = require('../repositories/storageAdapter');
 const CustomQuestionSet = require('../models/CustomQuestionSet');

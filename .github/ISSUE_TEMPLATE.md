@@ -10,6 +10,7 @@ assignees: ''
 A clear and concise description of the issue.
 
 ### Program Compliance Tracking
+- [ ] Issue title includes **ELUSoC_2026** (e.g., `feat: dynamic question bank ELUSoC_2026`)
 - [ ] This issue is submitted as part of **ELUSoC 2026**
 - [ ] I have verified this is not a duplicate issue
 

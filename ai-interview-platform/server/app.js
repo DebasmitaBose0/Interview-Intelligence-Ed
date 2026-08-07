@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const compression = require('compression');
 const authRoutes = require('./routes/authRoutes');
 const interviewRoutes = require('./routes/interviewRoutes');
 const reportRoutes = require('./routes/reportRoutes');
@@ -30,19 +31,21 @@ if (!process.env.JWT_SECRET) {
   logger.warn('JWT_SECRET environment variable is missing. Using default signing key.');
 }
 
+const { inputSanitizerMiddleware } = require('./middleware/inputSanitizer');
+
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: CSP_DIRECTIVES,
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false,
   crossOriginResourcePolicy: { policy: 'cross-origin' },
 }));
+app.use(compression());
 app.use(securityHeaders);
 app.use(cors(corsConfig));
 app.use(requestLogger);
 app.use(apiVersioning);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(inputSanitizerMiddleware);
 app.use(sanitizeMiddleware);
 app.use(rateLimiter(100));
 

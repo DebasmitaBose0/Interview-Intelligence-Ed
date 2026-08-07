@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Loader2, Briefcase, Plus, Trash2, ArrowLeft } from 'lucide-react';
+﻿import React, { useState, useEffect } from 'react';
+import { Calendar, Clock, Loader2, Briefcase, Plus, Trash2 } from 'lucide-react';
 import { useToast } from '../components/Common/ToastProvider';
 
 const card = { background: '#111', border: '1px solid #1e1e1e', borderRadius: '12px', padding: '24px' };
@@ -16,21 +16,15 @@ export default function ScheduleInterview({ setCurrentTab }) {
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    fetchSchedules();
-  }, []);
+  useEffect(() => { fetchSchedules(); }, []);
 
   const fetchSchedules = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('camsense_token');
-      const res = await fetch('/api/schedules', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch('/api/schedules', { headers: { Authorization: `Bearer ${token}` } });
       const json = await res.json();
-      if (json.success) {
-        setSchedules(json.data || []);
-      }
+      if (json.success) setSchedules(json.data || []);
     } catch (err) {
       console.warn('Failed to fetch schedules:', err);
     } finally {
@@ -40,10 +34,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
 
   const handleCreate = async (e) => {
     e.preventDefault();
-    if (!formData.scheduledAt) {
-      toast.show('Please select a date and time', 'error');
-      return;
-    }
+    if (!formData.scheduledAt) { toast.show('Please select a date and time', 'error'); return; }
     setSaving(true);
     try {
       const token = localStorage.getItem('camsense_token');
@@ -61,11 +52,8 @@ export default function ScheduleInterview({ setCurrentTab }) {
       } else {
         toast.show(json.message || 'Failed to schedule', 'error');
       }
-    } catch {
-      toast.show('Network error', 'error');
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.show('Network error', 'error'); }
+    finally { setSaving(false); }
   };
 
   const handleDelete = async (id) => {
@@ -75,21 +63,13 @@ export default function ScheduleInterview({ setCurrentTab }) {
       await fetch(`/api/schedules/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
       toast.show('Schedule removed', 'success');
       setSchedules(prev => prev.filter(s => s._id !== id));
-    } catch {
-      toast.show('Failed to delete', 'error');
-    } finally {
-      setDeletingId(null);
-    }
+    } catch { toast.show('Failed to delete', 'error'); }
+    finally { setDeletingId(null); }
   };
 
   const formatDate = (dateStr) => {
-    try {
-      return new Date(dateStr).toLocaleString('en-US', {
-        weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-      });
-    } catch {
-      return dateStr;
-    }
+    try { return new Date(dateStr).toLocaleString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+    catch { return dateStr; }
   };
 
   const getMinDateTime = () => {
@@ -108,10 +88,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
           <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#fff', margin: '0 0 6px' }}>Schedule Interview</h1>
           <p style={{ fontSize: '14px', color: '#666', margin: 0 }}>Plan your interview sessions in advance</p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{ padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-        >
+        <button onClick={() => setShowForm(!showForm)} style={{ padding: '10px 20px', background: '#fff', color: '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Plus size={16} /> {showForm ? 'Cancel' : 'New Schedule'}
         </button>
       </div>
@@ -143,7 +120,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
               </div>
             </div>
             <button type="submit" disabled={saving} style={{ padding: '11px', background: saving ? '#1a1a1a' : '#fff', color: saving ? '#555' : '#000', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-              {saving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Scheduling…</> : <>Schedule Interview <Calendar size={16} /></>}
+              {saving ? <><Loader2 size={15} style={{ animation: 'spin 1s linear infinite' }} /> Scheduling...</> : <>Schedule Interview <Calendar size={16} /></>}
             </button>
           </form>
         </div>
@@ -153,7 +130,6 @@ export default function ScheduleInterview({ setCurrentTab }) {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#888' }}>
             <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-            <p>Loading schedules...</p>
           </div>
         ) : schedules.length === 0 ? (
           <div style={{ ...card, textAlign: 'center', padding: '40px' }}>
@@ -164,18 +140,14 @@ export default function ScheduleInterview({ setCurrentTab }) {
           schedules.map(schedule => (
             <div key={schedule._id} style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flex: 1 }}>
-                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#1a1a1a', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '10px', background: '#1a1a1a', border: '1px solid #2a2a2a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Briefcase size={18} color="#ccc" />
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '15px', fontWeight: '600', color: '#fff' }}>{schedule.role}</div>
                   <div style={{ fontSize: '12px', color: '#888', display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Calendar size={12} /> {formatDate(schedule.scheduledAt)}
-                    </span>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={12} /> {schedule.durationMinutes || 45} min
-                    </span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Calendar size={12} /> {formatDate(schedule.scheduledAt)}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}><Clock size={12} /> {schedule.durationMinutes || 45} min</span>
                   </div>
                   {schedule.notes && <div style={{ fontSize: '12px', color: '#aaa', marginTop: '4px' }}>{schedule.notes}</div>}
                 </div>
@@ -192,10 +164,7 @@ export default function ScheduleInterview({ setCurrentTab }) {
           ))
         )}
       </div>
-
-      <style>{`
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-      `}</style>
+      <style>{`@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }`}</style>
     </div>
   );
 }

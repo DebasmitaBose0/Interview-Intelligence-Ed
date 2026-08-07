@@ -26,7 +26,9 @@ exports.rotateBackups = (maxBackups = 5) => {
     }
 
     const filesToDelete = files.slice(maxBackups);
+    let freedBytes = 0;
     filesToDelete.forEach(file => {
+      freedBytes += fs.statSync(file.path).size;
       fs.unlinkSync(file.path);
       console.log(`[Backup Rotation] Deleted old backup file: ${file.name}`);
     });
@@ -34,10 +36,12 @@ exports.rotateBackups = (maxBackups = 5) => {
     return {
       success: true,
       message: `Rotated backups. Deleted ${filesToDelete.length} files.`,
-      deletedCount: filesToDelete.length
+      deletedCount: filesToDelete.length,
+      freedBytes
     };
   } catch (error) {
     console.error('[Backup Rotation] Error during rotation:', error.message);
     throw error;
   }
 };
+

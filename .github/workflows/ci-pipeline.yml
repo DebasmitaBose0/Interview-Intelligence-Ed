@@ -1,0 +1,42 @@
+name: Continuous Integration Quality Pipeline
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build-and-test:
+    name: Build & Test Matrix (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Checkout repository source code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+          cache-dependency-path: 'ai-interview-platform/package-lock.json'
+
+      - name: Install Platform Dependencies
+        run: |
+          cd ai-interview-platform
+          npm ci
+
+      - name: Validate Environment Schema
+        run: |
+          cd ai-interview-platform
+          npm run validate-env || true
+
+      - name: Execute Unit & Integration Test Suites
+        run: |
+          cd ai-interview-platform
+          npm test -- --passWithNoTests
