@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
 const interviewReportSchema = new mongoose.Schema({
   interviewId: {
@@ -58,5 +58,5 @@ const interviewReportSchema = new mongoose.Schema({
 
 interviewReportSchema.index({ candidateId: 1, createdAt: -1 });
 
-const InterviewReport = mongoose.model('InterviewReport', interviewReportSchema);
-export default InterviewReport;
+const InterviewReport = mongoose.models.InterviewReport || mongoose.model('InterviewReport', interviewReportSchema);
+module.exports = InterviewReport;

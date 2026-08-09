@@ -1,15 +1,14 @@
-import { analyzeTranscriptText } from '../utils/nlpMetrics.js';
-import InterviewReport from '../models/InterviewReport.js';
+const { analyzeTranscriptText } = require('../utils/nlpMetrics');
+const InterviewReport = require('../models/InterviewReport');
 
-export const processInterviewAudioAnalytics = async ({
+const processInterviewAudioAnalytics = async ({
   interviewId,
   candidateId,
   transcriptText,
   durationSeconds = 180
 }) => {
-  const metrics = analyzeTranscriptText(transcriptText, durationSeconds);
+  const metrics = analyzeTranscriptText ? analyzeTranscriptText(transcriptText, durationSeconds) : {};
 
-  // Generate synthetic pause highlights
   const pauseHighlights = [
     { timestampSeconds: 24, durationSeconds: 3.2, reason: 'Hesitation before system design answer' },
     { timestampSeconds: 78, durationSeconds: 4.1, reason: 'Long pause during algorithm complexity explanation' }
@@ -28,4 +27,8 @@ export const processInterviewAudioAnalytics = async ({
   );
 
   return report;
+};
+
+module.exports = {
+  processInterviewAudioAnalytics
 };

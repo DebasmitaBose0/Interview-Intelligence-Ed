@@ -5,7 +5,7 @@
 
 const COMMON_FILLER_WORDS = ['um', 'uh', 'like', 'you know', 'basically', 'actually', 'sort of', 'kind of', 'i mean'];
 
-export const analyzeTranscriptText = (transcriptText = '', durationSeconds = 120) => {
+const analyzeTranscriptText = (transcriptText = '', durationSeconds = 120) => {
   if (!transcriptText || typeof transcriptText !== 'string') {
     return {
       wordsPerMinute: 0,
@@ -60,4 +60,8 @@ export const analyzeTranscriptText = (transcriptText = '', durationSeconds = 120
     confidenceIndex,
     clarityRating
   };
+};
+
+module.exports = {
+  analyzeTranscriptText
 };
