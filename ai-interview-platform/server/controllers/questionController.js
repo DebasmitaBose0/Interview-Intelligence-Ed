@@ -1,4 +1,5 @@
 const questionTemplateEngine = require('../services/questionTemplateEngine');
+const questionSetService = require('../services/questionSetService');
 const { sendSuccess, handleControllerError } = require('../utils/apiResponse');
 
 exports.getQuestionBanks = async (req, res, next) => {
@@ -28,5 +29,25 @@ exports.generateQuestion = async (req, res, next) => {
     sendSuccess(res, { role, difficulty, questions });
   } catch (error) {
     handleControllerError(res, error, 'Failed to generate questions');
+  }
+};
+
+exports.getUserQuestionSets = async (req, res, next) => {
+  try {
+    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const sets = await questionSetService.fetchQuestionSets(userId);
+    sendSuccess(res, { count: sets.length, sets });
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to fetch custom question sets');
+  }
+};
+
+exports.createCustomQuestionSet = async (req, res, next) => {
+  try {
+    const userId = req.user ? req.user._id : '664e4ea4a93a40498eb79e2a';
+    const newSet = await questionSetService.createQuestionSet(userId, req.body);
+    sendSuccess(res, newSet, 'Question set created successfully', 201);
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to create question set');
   }
 };
