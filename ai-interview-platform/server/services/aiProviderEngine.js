@@ -2,11 +2,15 @@
  * AI Provider Dispatcher and Resilience Engine
  * Manages failover between primary Gemini AI service and local/secondary Ollama providers.
  */
-const CircuitBreaker = require('../utils/circuitBreaker');
+const { extractCleanJson } = require('../utils/jsonSanitizer');
 
 class AIProviderEngine {
   constructor() {
     this.primaryBreaker = new CircuitBreaker({ failureThreshold: 3, resetTimeout: 20000 });
+  }
+
+  parseAiResponse(rawString) {
+    return extractCleanJson(rawString);
   }
 
   /**

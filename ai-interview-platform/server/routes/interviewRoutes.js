@@ -31,6 +31,8 @@ router.post('/start', protect, startInterviewValidator, validate, interviewContr
 router.post('/answer', protect, submitAnswerValidator, validate, interviewController.submitAnswer);
 router.post('/follow-up', protect, followUpValidator, validate, interviewController.submitAnswerAndGenerateFollowUp);
 router.post('/questions', protect, questionController.generateQuestion);
+router.get('/questions/banks', questionController.getQuestionBanks);
+router.post('/questions/banks', protect, questionController.createQuestionBank);
 router.post('/coding/eval', protect, sandboxMiddleware.validateCodePayload, evaluateCodeValidator, validate, interviewController.evaluateCode);
 router.post('/evaluate-answer', protect, interviewController.evaluateAnswerRealtime);
 router.post('/telemetry', protect, interviewController.logTelemetry);
