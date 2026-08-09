@@ -7,6 +7,7 @@ import { getAuthHeader } from '../utils/authHeaders';
 import { useProctor } from '../hooks/useProctor';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { useMediaQuery } from '../hooks/useMediaQuery';
+import { stopMediaStream } from '../utils/mediaStreamCleaner';
 
 export default function InterviewSession({ globalState, setGlobalState, setCurrentTab }) {
   const selectedRole = globalState.role || 'Frontend Engineer';
