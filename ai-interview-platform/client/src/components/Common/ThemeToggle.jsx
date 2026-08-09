@@ -21,7 +21,7 @@ const iconButton = {
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',
-  color: '#888',
+  color: 'var(--color-secondary, #888)',
   padding: '6px',
   borderRadius: '50%',
   display: 'flex',
@@ -52,6 +52,7 @@ export default function ThemeToggle({ variant = 'full' }) {
       onClick={toggleTheme}
       style={fullButton}
       className="theme-toggle"
+      aria-pressed={theme === 'dark'}
       aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
     >
       {theme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
