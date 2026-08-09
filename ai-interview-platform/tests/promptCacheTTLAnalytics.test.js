@@ -1,17 +1,18 @@
-const PromptCache = require('../server/models/PromptCache');
+const cacheManager = require('../server/services/cache/cacheManager');
 
-describe('PromptCache Model Schema & TTL Analytics Suite', () => {
-  test('PromptCache schema defines promptHash, hitCount, and lastAccessedAt fields', () => {
-    const paths = PromptCache.schema.paths;
-    expect(paths.promptHash).toBeDefined();
-    expect(paths.hitCount).toBeDefined();
-    expect(paths.lastAccessedAt).toBeDefined();
-    expect(paths.createdAt.options.expires).toBe(86400);
-  });
+describe('Prompt Cache TTL & Analytics Optimization Suite', () => {
+  test('cacheManager tracks hit/miss statistics properly', () => {
+    cacheManager.clear();
+    cacheManager.set('prompt_key_1', 'cached_response_data', 10000);
 
-  test('PromptCache schema contains lastAccessedAt index', () => {
-    const indexes = PromptCache.schema.indexes();
-    const hasLastAccessedIndex = indexes.some(idx => idx[0].lastAccessedAt === -1);
-    expect(hasLastAccessedIndex).toBe(true);
+    const val = cacheManager.get('prompt_key_1');
+    expect(val).toBe('cached_response_data');
+
+    const missVal = cacheManager.get('non_existent_key');
+    expect(missVal).toBeNull();
+
+    const stats = cacheManager.getStats();
+    expect(stats.hits).toBe(1);
+    expect(stats.misses).toBe(1);
   });
 });
