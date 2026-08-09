@@ -5,5 +5,7 @@ describe('ErrorTracker Analytics Aggregation Suite', () => {
     const stats = await ErrorTracker.getStats(24);
     expect(stats).toHaveProperty('byCode');
     expect(Array.isArray(stats.byCode)).toBe(true);
+    expect(stats).toHaveProperty('total');
+    expect(stats).toHaveProperty('unresolved');
   });
 });

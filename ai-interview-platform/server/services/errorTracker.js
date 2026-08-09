@@ -1,5 +1,6 @@
 const ErrorLog = require('../models/ErrorLog');
 const logger = require('./logger');
+const { isDatabaseConnected } = require('../utils/database');
 
 class ErrorTracker {
   static async capture(error, context = {}) {
@@ -18,11 +19,12 @@ class ErrorTracker {
         metadata: context.metadata || {},
       };
 
-      await ErrorLog.create(entry);
+      if (isDatabaseConnected()) {
+        await ErrorLog.create(entry);
+      }
 
       if (entry.level === 'error') {
         logger.error(`[ErrorTracker] Captured error: ${entry.message}`, {
-          errorId: entry._id,
           path: entry.path,
           userId: entry.userId,
         });
@@ -36,6 +38,9 @@ class ErrorTracker {
   }
 
   static async list(filters = {}) {
+    if (!isDatabaseConnected()) {
+      return { docs: [], total: 0, page: 1, limit: 20, totalPages: 0 };
+    }
     const query = {};
     if (filters.level) query.level = filters.level;
     if (filters.resolved !== undefined) query.resolved = filters.resolved;
@@ -55,6 +60,7 @@ class ErrorTracker {
   }
 
   static async resolve(id, resolvedBy) {
+    if (!isDatabaseConnected()) return null;
     return ErrorLog.findByIdAndUpdate(id, {
       resolved: true,
       resolvedAt: new Date(),
@@ -63,8 +69,17 @@ class ErrorTracker {
   }
 
   static async getStats(timeframeHours = 24) {
+    if (!isDatabaseConnected()) {
+      return {
+        total: 0,
+        since: new Date(Date.now() - timeframeHours * 60 * 60 * 1000),
+        byLevel: [],
+        byCode: [],
+        unresolved: 0,
+      };
+    }
     const since = new Date(Date.now() - timeframeHours * 60 * 60 * 1000);
-    const [stats, codeStats] = await Promise.all([
+    const [stats, codeStats, unresolved] = await Promise.all([
       ErrorLog.aggregate([
         { $match: { createdAt: { $gte: since } } },
         { $group: {
@@ -79,7 +94,8 @@ class ErrorTracker {
           _id: '$code',
           count: { $sum: 1 }
         }}
-      ])
+      ]),
+      ErrorLog.countDocuments({ resolved: false })
     ]);
     const total = stats.reduce((acc, s) => acc + s.count, 0);
     return {
@@ -87,9 +103,9 @@ class ErrorTracker {
       since,
       byLevel: stats,
       byCode: codeStats,
-      unresolved: await ErrorLog.countDocuments({ resolved: false }),
+      unresolved,
     };
   }
 }
 
-module.exports = ErrorTracker;
+module.exports = ErrorTracker;
