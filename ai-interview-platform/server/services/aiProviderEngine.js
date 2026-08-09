@@ -1,8 +1,5 @@
-/**
- * AI Provider Dispatcher and Resilience Engine
- * Manages failover between primary Gemini AI service and local/secondary Ollama providers.
- */
 const { extractCleanJson } = require('../utils/jsonSanitizer');
+const CircuitBreaker = require('../utils/circuitBreaker');
 
 class AIProviderEngine {
   constructor() {
@@ -13,12 +10,6 @@ class AIProviderEngine {
     return extractCleanJson(rawString);
   }
 
-  /**
-   * Executes AI evaluation task using primary provider with fallback to backup provider.
-   * @param {Function} primaryCall - Primary Gemini AI provider call.
-   * @param {Function} secondaryCall - Fallback local provider call.
-   * @returns {Promise<Object>} Evaluated evaluation output.
-   */
   async evaluateWithFallback(primaryCall, secondaryCall) {
     try {
       return await this.primaryBreaker.execute(primaryCall, async (err) => {
