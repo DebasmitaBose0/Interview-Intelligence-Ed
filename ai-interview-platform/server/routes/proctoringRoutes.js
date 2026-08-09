@@ -1,10 +1,10 @@
-import express from 'express';
-import { logProctorViolation, getProctorLogs, verifyCandidateIdentity } from '../controllers/proctoringController.js';
-
+const express = require('express');
 const router = express.Router();
+const proctoringController = require('../controllers/proctoringController');
+const { protect } = require('../middleware/authMiddleware');
 
-router.post('/violations', logProctorViolation);
-router.get('/logs/:interviewId', getProctorLogs);
-router.post('/verify-identity', verifyCandidateIdentity);
+router.post('/log', protect, proctoringController.logViolation);
+router.get('/session/:sessionId', protect, proctoringController.getSessionLogs);
+router.get('/summary/:sessionId', protect, proctoringController.getSummary);
 
-export default router;
+module.exports = router;

@@ -1,43 +1,42 @@
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 
-const proctorLogSchema = new mongoose.Schema({
-  candidateId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+const proctorLogSchema = new mongoose.Schema(
+  {
+    sessionId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    candidateId: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    violationType: {
+      type: String,
+      enum: ['TAB_SWITCH', 'MULTIPLE_FACES', 'NO_FACE_DETECTED', 'AUDIO_ANOMALY', 'DEV_TOOLS_OPEN', 'FULLSCREEN_EXIT'],
+      required: true,
+    },
+    severity: {
+      type: String,
+      enum: ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'],
+      default: 'MEDIUM',
+    },
+    metadata: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
+    },
+    timestamp: {
+      type: Date,
+      default: Date.now,
+      index: true,
+    },
   },
-  interviewId: {
-    type: String,
-    required: true
-  },
-  violationType: {
-    type: String,
-    enum: ['tab_switch', 'window_blur', 'multiple_faces', 'no_face_detected', 'stream_tampering', 'identity_mismatch'],
-    required: true
-  },
-  severity: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'critical'],
-    default: 'medium'
-  },
-  details: {
-    type: String,
-    default: ''
-  },
-  capturedFrameUrl: {
-    type: String,
-    default: ''
-  },
-  ipAddress: {
-    type: String,
-    default: '127.0.0.1'
+  {
+    timestamps: true,
   }
-}, {
-  timestamps: true
-});
+);
 
-proctorLogSchema.index({ candidateId: 1, interviewId: 1 });
-proctorLogSchema.index({ createdAt: -1 });
+proctorLogSchema.index({ sessionId: 1, timestamp: -1 });
 
-const ProctorLog = mongoose.model('ProctorLog', proctorLogSchema);
-export default ProctorLog;
+module.exports = mongoose.model('ProctorLog', proctorLogSchema);
