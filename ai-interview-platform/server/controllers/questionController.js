@@ -1,34 +1,31 @@
-const SandboxRunner = require('../utils/sandboxRunner');
-const { generateCategorizedQuestions } = require('../services/ollamaService');
-const { compileQuestionPromptTemplate } = require('../utils/questionTemplateEngine');
-const { ApiError } = require('../middleware/error/errorHandler');
-const { sendSuccess, sendError, handleControllerError } = require('../utils/apiResponse');
+const questionTemplateEngine = require('../services/questionTemplateEngine');
+const { sendSuccess, handleControllerError } = require('../utils/apiResponse');
+
+exports.getQuestionBanks = async (req, res, next) => {
+  try {
+    const { category, difficulty } = req.query;
+    const banks = await questionTemplateEngine.getTemplatesByCategory(category, difficulty);
+    sendSuccess(res, { count: banks.length, banks });
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to retrieve question banks');
+  }
+};
+
+exports.createQuestionBank = async (req, res, next) => {
+  try {
+    const bank = await questionTemplateEngine.createQuestionBank(req.body, req.user?._id);
+    sendSuccess(res, bank, 'Question bank created successfully', 201);
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to create question bank');
+  }
+};
 
 exports.generateQuestion = async (req, res, next) => {
   try {
-    const { role, difficulty, experience, jobDescription, resumeSkills } = req.body;
-
-    if (!role || !experience) {
-      return sendError(res, 'Please specify target role and experience', 400);
-    }
-
-    const templateConfig = compileQuestionPromptTemplate(role, difficulty || 'Medium', resumeSkills || []);
-
-    console.log(`[AI Question Generator] Generating dynamic questions for ${role} with prompt template`);
-    const categorizedQuestions = await generateCategorizedQuestions({
-      role,
-      experience,
-      skills: resumeSkills || [],
-      jobDescription: jobDescription || '',
-    });
-
-    sendSuccess(res, {
-      role,
-      difficulty: difficulty || 'Medium',
-      experience,
-      templateConfig,
-      ...categorizedQuestions
-    });
+    const { role, difficulty } = req.body;
+    const banks = await questionTemplateEngine.getTemplatesByCategory(role, difficulty);
+    const questions = banks.length > 0 ? questionTemplateEngine.selectRandomQuestions(banks[0], 5) : [];
+    sendSuccess(res, { role, difficulty, questions });
   } catch (error) {
     handleControllerError(res, error, 'Failed to generate questions');
   }
