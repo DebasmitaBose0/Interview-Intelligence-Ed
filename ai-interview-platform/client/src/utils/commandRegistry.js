@@ -2,7 +2,7 @@
  * Command Palette Navigation & Action Registry
  */
 
-const DEFAULT_COMMANDS = [
+export const DEFAULT_COMMANDS = [
   { id: 'dashboard', label: 'Go to Dashboard Overview', category: 'Navigation', tab: 'dashboard' },
   { id: 'setup', label: 'Launch New Interview Setup', category: 'Actions', tab: 'setup' },
   { id: 'interview', label: 'Go to Active Interview Session', category: 'Navigation', tab: 'interview' },
@@ -12,7 +12,7 @@ const DEFAULT_COMMANDS = [
   { id: 'audit', label: 'View Security Audit Logs', category: 'Admin', tab: 'audit' },
 ];
 
-function filterCommands(commands, query) {
+export function filterCommands(commands, query) {
   if (!query || typeof query !== 'string') return commands;
   const cleanQuery = query.toLowerCase().trim();
   return commands.filter((cmd) =>
@@ -21,7 +21,4 @@ function filterCommands(commands, query) {
   );
 }
 
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { DEFAULT_COMMANDS, filterCommands };
-  module.exports.default = DEFAULT_COMMANDS;
-}
+export default DEFAULT_COMMANDS;

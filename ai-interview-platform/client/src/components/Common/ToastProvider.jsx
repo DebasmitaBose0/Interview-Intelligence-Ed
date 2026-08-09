@@ -57,3 +57,5 @@ export function useToastContext() {
   if (!ctx) throw new Error('useToastContext must be used within a ToastProvider');
   return ctx;
 }
+
+export const useToast = useToastContext;
