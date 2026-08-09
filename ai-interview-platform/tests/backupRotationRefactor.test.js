@@ -6,4 +6,11 @@ describe('Backup Rotation Service Suite', () => {
     expect(result.success).toBe(true);
     expect(result).toHaveProperty('message');
   });
+
+  test('rotateBackups accepts retention maxAgeDays parameter', () => {
+    const result = rotateBackups(5, 7);
+    expect(result.success).toBe(true);
+    expect(result.deletedCount).toBeDefined();
+    expect(result.freedBytes).toBeDefined();
+  });
 });
