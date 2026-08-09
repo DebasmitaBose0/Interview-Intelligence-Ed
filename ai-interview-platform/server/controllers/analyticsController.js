@@ -49,3 +49,25 @@ export const getInterviewReport = async (req, res, next) => {
     next(error);
   }
 };
+
+export const exportReport = async (req, res, next) => {
+  try {
+    const analyticsExporter = require('../utils/analyticsExporter');
+    const { format = 'json', reportData } = req.body;
+
+    if (format === 'csv') {
+      const csv = analyticsExporter.exportToCSV(reportData);
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', 'attachment; filename="interview-report.csv"');
+      return res.send(csv);
+    }
+
+    const jsonData = analyticsExporter.exportToJSON(reportData);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="interview-report.json"');
+    return res.send(jsonData);
+  } catch (error) {
+    next(error);
+  }
+};
+

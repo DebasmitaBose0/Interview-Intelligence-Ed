@@ -58,6 +58,7 @@ app.use('/api/interview', interviewRoutes);
 app.use('/api/report', reportRoutes);
 app.use('/api/resume', resumeRoutes);
 app.use('/api/schedules', scheduleRoutes);
+app.use('/api/proctoring', require('./routes/proctoringRoutes'));
 app.use('/api/health', healthRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin', require('./routes/queryRoutes'));

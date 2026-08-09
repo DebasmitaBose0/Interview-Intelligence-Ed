@@ -1,5 +1,6 @@
 import ProctorLog from '../models/ProctorLog.js';
 import crypto from 'crypto';
+import proctoringService from '../services/proctoringService.js';
 
 // @desc    Log a security or proctoring violation event during an interview
 // @route   POST /api/proctoring/violations
@@ -43,6 +44,41 @@ export const getProctorLogs = async (req, res, next) => {
       count: logs.length,
       logs
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Log a security or proctoring violation event during an interview
+export const logViolation = async (req, res, next) => {
+  try {
+    const { sessionId, candidateId, violationType, severity, metadata } = req.body;
+    const log = await proctoringService.logViolation({
+      sessionId: sessionId || req.body.interviewId,
+      candidateId: candidateId || req.user?._id || 'guest-user',
+      violationType: violationType || 'TAB_SWITCH',
+      severity: severity || 'MEDIUM',
+      metadata,
+    });
+    res.status(201).json({ success: true, data: log });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSessionLogs = async (req, res, next) => {
+  try {
+    const logs = await proctoringService.getSessionViolations(req.params.sessionId);
+    res.status(200).json({ success: true, count: logs.length, data: logs });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getSummary = async (req, res, next) => {
+  try {
+    const summary = await proctoringService.getViolationSummary(req.params.sessionId);
+    res.status(200).json({ success: true, data: summary });
   } catch (error) {
     next(error);
   }
