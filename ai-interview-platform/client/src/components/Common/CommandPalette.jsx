@@ -53,6 +53,9 @@ export default function CommandPalette({ isOpen, onClose, onSelectTab }) {
       <div className="cmd-palette-box" onClick={(e) => e.stopPropagation()}>
         <input
           type="text"
+          role="combobox"
+          aria-expanded="true"
+          aria-label="Command palette input"
           className="cmd-palette-input"
           placeholder="Type a command or navigate pages... (Press ESC to exit)"
           value={query}
