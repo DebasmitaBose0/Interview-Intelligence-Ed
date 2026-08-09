@@ -56,5 +56,7 @@ const interviewReportSchema = new mongoose.Schema({
   timestamps: true
 });
 
+interviewReportSchema.index({ candidateId: 1, createdAt: -1 });
+
 const InterviewReport = mongoose.model('InterviewReport', interviewReportSchema);
 export default InterviewReport;

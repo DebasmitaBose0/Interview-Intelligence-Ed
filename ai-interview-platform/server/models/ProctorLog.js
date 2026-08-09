@@ -38,6 +38,7 @@ const proctorLogSchema = new mongoose.Schema({
 
 proctorLogSchema.index({ candidateId: 1, interviewId: 1 });
 proctorLogSchema.index({ createdAt: -1 });
+proctorLogSchema.index({ interviewId: 1, violationType: 1, createdAt: -1 });
 
 const ProctorLog = mongoose.model('ProctorLog', proctorLogSchema);
 export default ProctorLog;
