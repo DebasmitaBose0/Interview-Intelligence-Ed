@@ -30,8 +30,8 @@ const A11yFocusTrapModal = ({ isOpen, onClose, title, children }) => {
         className="bg-slate-900 text-white rounded-3xl p-6 border border-slate-800 shadow-2xl w-full max-w-lg relative outline-none space-y-4"
       >
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-          <h3 id="modal-title" className="text-lg font-black">{title}</h3>
-          <button onClick={onClose} aria-label="Close dialog" className="p-1 text-slate-400 hover:text-white">
+          <h3 id="modal-title" className="text-lg font-black text-white">{title}</h3>
+          <button onClick={onClose} aria-label="Close dialog" className="p-1 text-slate-400 hover:text-white rounded-lg focus:ring-2 focus:ring-blue-500">
             <X size={18} />
           </button>
         </div>
