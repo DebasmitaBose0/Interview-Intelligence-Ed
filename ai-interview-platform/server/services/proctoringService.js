@@ -45,6 +45,23 @@ class ProctoringService {
 
     return summary;
   }
+
+  async calculateIntegrityScore(sessionId) {
+    const summary = await this.getViolationSummary(sessionId);
+    let penalty = 0;
+    penalty += (summary.severityCounts.LOW || 0) * 2;
+    penalty += (summary.severityCounts.MEDIUM || 0) * 5;
+    penalty += (summary.severityCounts.HIGH || 0) * 15;
+    penalty += (summary.severityCounts.CRITICAL || 0) * 30;
+
+    const integrityScore = Math.max(0, 100 - penalty);
+    return {
+      sessionId,
+      integrityScore,
+      status: integrityScore >= 80 ? 'CLEAN' : integrityScore >= 50 ? 'REVIEW_REQUIRED' : 'FLAGGED',
+      summary
+    };
+  }
 }
 
 module.exports = new ProctoringService();
