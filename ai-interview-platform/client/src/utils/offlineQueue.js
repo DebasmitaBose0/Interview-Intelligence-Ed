@@ -1,11 +1,7 @@
-/**
- * Offline Submission Queue Manager
- * Persists failed network evaluation payloads and auto-flushes when connectivity is restored.
- */
 const STORAGE_KEY = 'interview_offline_queue_v1';
 const MAX_ATTEMPTS = 5;
 
-export class OfflineQueue {
+class OfflineQueue {
   constructor() {
     this.queue = this.loadQueue();
   }
@@ -97,44 +93,29 @@ export class OfflineQueue {
   }
 }
 
-export const offlineQueue = new OfflineQueue();
+const offlineQueue = new OfflineQueue();
 
-/**
- * Convenience helper to queue an offline network request payload.
- *
- * @param {string} url - API endpoint URL
- * @param {any} payload - Request payload / body data
- * @param {object} [options] - Additional request options (method, headers)
- * @returns {object} Queued item object
- */
-export function queueOfflineRequest(url, payload, options = {}) {
+function queueOfflineRequest(url, payload, options = {}) {
   return offlineQueue.enqueue(url, payload, options);
 }
 
-/**
- * Convenience helper to synchronize / flush all queued offline requests.
- *
- * @param {typeof fetch} [customFetch] - Optional custom fetch implementation
- * @returns {Promise<{ synced: number, failed: number }>}
- */
-export async function syncOfflineRequests(customFetch = fetch) {
+async function syncOfflineRequests(customFetch = fetch) {
   return offlineQueue.flush(customFetch);
 }
 
-/**
- * Retrieves a copy of the current offline queue items.
- *
- * @returns {Array}
- */
-export function getOfflineQueue() {
+function getOfflineQueue() {
   return offlineQueue.getQueue();
 }
 
-/**
- * Clears all items in the offline queue.
- */
-export function clearOfflineQueue() {
+function clearOfflineQueue() {
   offlineQueue.clear();
 }
 
-export default offlineQueue;
+module.exports = {
+  OfflineQueue,
+  offlineQueue,
+  queueOfflineRequest,
+  syncOfflineRequests,
+  getOfflineQueue,
+  clearOfflineQueue
+};
