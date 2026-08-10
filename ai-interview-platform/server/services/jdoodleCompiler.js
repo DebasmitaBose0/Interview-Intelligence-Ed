@@ -1,5 +1,3 @@
-const axios = require('axios');
-
 exports.executeCode = async (code, language) => {
   const clientId = process.env.JDOODLE_CLIENT_ID;
   const clientSecret = process.env.JDOODLE_CLIENT_SECRET;
@@ -9,16 +7,21 @@ exports.executeCode = async (code, language) => {
   }
 
   try {
-    const response = await axios.post('https://api.jdoodle.com/v1/execute', {
-      clientId,
-      clientSecret,
-      script: code,
-      language: language === 'javascript' ? 'nodejs' : language,
-      versionIndex: '0'
-    }, { timeout: 10000 });
+    const response = await fetch('https://api.jdoodle.com/v1/execute', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        clientId,
+        clientSecret,
+        script: code,
+        language: language === 'javascript' ? 'nodejs' : language,
+        versionIndex: '0'
+      })
+    });
+    const data = await response.json();
     return {
-      output: response.data.output,
-      statusCode: response.data.statusCode
+      output: data.output,
+      statusCode: data.statusCode
     };
   } catch (error) {
     console.error('[JDoodle API] execution failed:', error.message);
