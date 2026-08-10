@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { ShieldCheck, Camera, AlertOctagon, Lock, CheckCircle2, RefreshCw } from 'lucide-react';
+import { useMediaDevices } from '../../hooks/useMediaDevices';
 import webrtcEncryption from '../../services/webrtcEncryption';
 
 const CandidateIdentityVerifier = ({ interviewId = 'session-101', onVerified }) => {
   const videoRef = useRef(null);
+  const { audioStream, streamError, isReconnecting, reconnectStream } = useMediaDevices();
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
   const [confidence, setConfidence] = useState(0);
