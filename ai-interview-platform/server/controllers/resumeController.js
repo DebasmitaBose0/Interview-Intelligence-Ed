@@ -152,3 +152,20 @@ exports.analyzeJobDescription = async (req, res) => {
     handleControllerError(res, error, 'Failed to analyze job description');
   }
 };
+
+exports.exportResumeAnalytics = async (req, res) => {
+  try {
+    const { skills = [], matchPercentage = 0, targetRole = 'Software Engineer' } = req.body;
+    const analytics = {
+      exportTimestamp: new Date().toISOString(),
+      targetRole,
+      matchPercentage,
+      totalSkillsFound: skills.length,
+      topSkills: skills.slice(0, 10),
+      readinessGrade: matchPercentage >= 80 ? 'A+' : matchPercentage >= 60 ? 'B' : 'C'
+    };
+    sendSuccess(res, analytics, 200, 'Resume analytics exported successfully');
+  } catch (error) {
+    handleControllerError(res, error, 'Failed to export resume analytics');
+  }
+};
